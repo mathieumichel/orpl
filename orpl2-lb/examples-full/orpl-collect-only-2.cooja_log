@@ -1,0 +1,55 @@
+[11:55:03 - main] [GUI.java:3139] [WARN] - JAVA_HOME environment variable not set, Cooja motes may not compile
+[11:55:03 - main] [GUI.java:1308] [INFO] - > Starting Cooja
+[11:55:03 - main] [GUI.java:2826] [INFO] - External tools default settings: /external_tools_linux_64.config
+[11:55:03 - main] [GUI.java:2856] [INFO] - External tools user settings: /home/macfly/.cooja.user.properties
+[11:55:03 - main] [GUI.java:3581] [WARN] - Loaded simulation may depend on not found  extension: '/home/macfly/Workspaces/Eclipse/Contiki/tools/cooja/contiki_tests/[APPS_DIR]/mrm'
+[11:55:03 - main] [GUI.java:3581] [WARN] - Loaded simulation may depend on not found  extension: '/home/macfly/Workspaces/Eclipse/Contiki/tools/cooja/contiki_tests/[APPS_DIR]/mspsim'
+[11:55:03 - main] [GUI.java:3581] [WARN] - Loaded simulation may depend on not found  extension: '/home/macfly/Workspaces/Eclipse/Contiki/tools/cooja/contiki_tests/[APPS_DIR]/avrora'
+[11:55:03 - main] [GUI.java:3581] [WARN] - Loaded simulation may depend on not found  extension: '/home/macfly/Workspaces/Eclipse/Contiki/tools/cooja/contiki_tests/[APPS_DIR]/serial_socket'
+[11:55:03 - main] [GUI.java:3581] [WARN] - Loaded simulation may depend on not found  extension: '/home/macfly/Workspaces/Eclipse/Contiki/tools/cooja/contiki_tests/[APPS_DIR]/collect-view'
+[11:55:03 - main] [GUI.java:3581] [WARN] - Loaded simulation may depend on not found  extension: '/home/macfly/Workspaces/Eclipse/Contiki/tools/cooja/contiki_tests/[APPS_DIR]/powertracker'
+[11:55:03 - main] [Simulation.java:423] [INFO] - Simulation random seed: 123461
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [MspMote.java:217] [INFO] - Loading firmware from: /home/macfly/Git/mmic/orpl/orpl2-lb/examples-full/app-collect-only.sky
+[11:55:04 - main] [GUI.java:1751] [INFO] - Visualized plugin was not started: class se.sics.cooja.plugins.SimControl
+[11:55:04 - main] [GUI.java:1751] [INFO] - Visualized plugin was not started: class se.sics.cooja.plugins.Visualizer
+[11:55:04 - main] [GUI.java:1751] [INFO] - Visualized plugin was not started: class se.sics.cooja.plugins.LogListener
+[11:55:04 - main] [GUI.java:1751] [INFO] - Visualized plugin was not started: class se.sics.cooja.plugins.TimeLine
+[11:55:04 - main] [GUI.java:1751] [INFO] - Visualized plugin was not started: class se.sics.cooja.plugins.RadioLogger
+[11:55:05 - main] [ScriptRunner.java:421] [INFO] - Test script deactivated
+[11:55:05 - main] [LogScriptEngine.java:264] [INFO] - Script timeout in 7200000 ms
+[11:55:05 - main] [ScriptRunner.java:378] [INFO] - Test script activated
+[11:55:05 - Thread-2] [Simulation.java:252] [INFO] - Simulation main loop started, system time: 1393412105352
+[11:56:18 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 5.00%, done in 1386.9 sec
+[11:57:16 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 10.00%, done in 1179.1 sec
+[11:58:19 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 15.00%, done in 1099.2 sec
+[11:59:26 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 20.00%, done in 1043.8 sec
+[12:00:39 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 25.00%, done in 1003.3 sec
+[12:01:50 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 30.00%, done in 945.3 sec
+[12:02:55 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 35.00%, done in 872.3 sec
+[12:03:59 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 40.00%, done in 801.8 sec
+[12:05:04 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 45.00%, done in 732.1 sec
+[12:06:07 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 50.00%, done in 662.2 sec
+[12:07:15 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 55.00%, done in 597.1 sec
+[12:08:21 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 60.00%, done in 531.0 sec
+[12:09:31 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 65.00%, done in 466.2 sec
+[12:10:47 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 70.00%, done in 403.6 sec
+[12:11:49 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 75.00%, done in 334.9 sec
+[12:12:52 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 80.00%, done in 266.8 sec
+[12:14:00 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 85.00%, done in 200.4 sec
+[12:15:10 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 90.00%, done in 133.9 sec
+[12:16:23 - Thread-2] [LogScriptEngine.java:386] [INFO] - Test script at 95.00%, done in 67.3 sec
+[12:17:39 - Thread-2] [LogScriptEngine.java:372] [INFO] - Timeout event @ 7200000000
+[12:17:39 - Thread-2] [Simulation.java:311] [INFO] - Simulation main loop stopped, system time: 1393413459348	Duration: 1353996 ms	Simulated time 7200000 ms	Ratio 5.31759325729175
+[12:17:39 - Thread-1] [LogScriptEngine.java:308] [INFO] - Test script finished
+[12:17:39 - AWT-EventQueue-0] [ScriptRunner.java:421] [INFO] - Test script deactivated
