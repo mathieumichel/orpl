@@ -44,6 +44,11 @@
 #define WITH_ORPL_LB_DIO_TARGET 0
 #define WITH_VARIABLE_TXRATE 0
 
+#define WITH_ORPL_LOADCTRL 1
+#ifdef WITH_ORPL_LOADCTRL
+#define QUEUEBUF_CONF_STATS 1
+#endif
+
 /* EDC is the objective function used by ORPL */
 #undef RPL_CONF_OF
 #define RPL_CONF_OF rpl_of_edc

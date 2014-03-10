@@ -47,6 +47,7 @@
 #include <string.h>
 
 #if WITH_ORPL
+extern uint8_t queuebuf_len, queuebuf_ref_len, queuebuf_max_len;
 
 /* The different link-layer addresses used for anycast */
 rimeaddr_t anycast_addr_up = {.u8 = {0xfa, 0xfa, 0xfa, 0xfa, 0xfa, 0xfa, 0xfa, 0xfa}};
@@ -109,6 +110,12 @@ orpl_softack_input_callback(const uint8_t *frame, uint8_t framelen, uint8_t **ac
 	if(is_data) {
 		if(ack_required) { /* This is unicast or unicast, parse it */
 			do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
+#if WITH_ORPL_LOADCTRL
+		  printf("plop %u/%u\n", queuebuf_len, queuebuf_max_len);
+		  do_ack = (orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack && queuebuf_len < queuebuf_max_len);
+#else
+		  do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
+#endif
 		} else { /* We also ack broadcast, even if we didn't modify the framer
 		and still send them with ack_required unset */
 			if(seqno != last_acked_seqno) {

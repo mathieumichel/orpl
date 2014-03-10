@@ -632,7 +632,7 @@ managecycle(void *ptr)
 #if OSCILLATION
     if(loadbalancing_is_on && (cpt+1)>=8){
 #else
-      if(loadbalancing_is_on && (cpt+1)>=8) && (cpt+1)%4==0){//cpt+1 because we wait 1 minute before entering the stuff
+      if(loadbalancing_is_on && (cpt+1)>=8 && (cpt+1)%4==0){//cpt+1 because we wait 1 minute before entering the stuff
 #endif
 
       periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
