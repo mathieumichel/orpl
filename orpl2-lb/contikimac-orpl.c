@@ -75,7 +75,7 @@
 #define CYCLE_STEP_MAX (CYCLE_TIME/2)///2) //we don't want to move too fast
 #define DC_ALPHA 0.25 //prev 0.10 (changed 07/02)
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define OSCILLATION 1
+#define OSCILLATION 0
 #define HYSTERESIS DUTY_CYCLE_TARGET*5/100
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
