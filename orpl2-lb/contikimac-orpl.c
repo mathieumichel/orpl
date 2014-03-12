@@ -636,7 +636,7 @@ managecycle(void *ptr)
 #endif
 
       periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
-      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
+      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
@@ -1262,6 +1262,7 @@ input_packet(void)
         rpl_set_parent_rank((uip_lladdr_t *)packetbuf_addr(PACKETBUF_ADDR_SENDER), packetbuf_attr(PACKETBUF_ATTR_EDC));
         prev_seqno = packetbuf_attr(PACKETBUF_ATTR_PACKET_ID);
       }
+
     }
 
     if(packetbuf_datalen() > 0 &&

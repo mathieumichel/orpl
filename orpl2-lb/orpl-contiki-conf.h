@@ -39,15 +39,35 @@
 #define __ORPL_CONTIKI_CONF_H__
 
 /* Used for modification of core files */
+//#############################################################################"
 #define WITH_ORPL 1
+
+#if WITH_ORPL
+
 #define WITH_ORPL_LB 1
+
+#if WITH_ORPL_LB
+#define WITH_ORPL_LB_DIO_TARGET 0
+#else /*WITH_ORPL_LB*/
+#define WITH_ORPL_LB_DIO_TARGET 0
+#endif /*WITH_ORPL_LB*/
+
+#define WITH_VARIABLE_TXRATE 0
+
+
+#else /*WITH_ORPL*/
+#define WITH_ORPL_LB 0
 #define WITH_ORPL_LB_DIO_TARGET 0
 #define WITH_VARIABLE_TXRATE 0
 
-#define WITH_ORPL_LOADCTRL 1
+#endif /*WITH_ORPL*/
+
+#define WITH_ORPL_LOADCTRL 0
 #ifdef WITH_ORPL_LOADCTRL
 #define QUEUEBUF_CONF_STATS 1
 #endif
+
+//#############################################################################"
 
 /* EDC is the objective function used by ORPL */
 #undef RPL_CONF_OF

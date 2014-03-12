@@ -78,7 +78,7 @@ receiver(struct simple_udp_connection *c,
   if(temp!=0){
   dc_obj_count+=1;
   dc_obj_metric=(temp + (dc_obj_count-1) * dc_obj_metric)/dc_obj_count;
-  printf("ORPL_LB: DC metric average %u-%u\n",dc_obj_metric,temp);
+  printf("ORPL_LB: dc_metric %u-%u\n",dc_obj_metric,temp);
   }
 #endif
   ORPL_LOG_FROM_APPDATAPTR((struct app_data *)data, "App: received");
@@ -97,7 +97,7 @@ void app_send_to(uint16_t id) {
   data.fpcount = 0;
 #if WITH_ORPL_LB & WITH_ORPL_LB_DIO_TARGET
   //data.dc_metric=cycle_time* 1000/RTIMER_ARCH_SECOND;
-  data.dc_metric=periodic_dc;
+  data.dc_metric=periodic_tx_dc;
 #endif
   //data.wuint = averageWUratio;
   set_ipaddr_from_id(&dest_ipaddr, id);
