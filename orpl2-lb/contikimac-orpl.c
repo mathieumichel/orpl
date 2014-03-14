@@ -76,7 +76,7 @@
 #define DC_ALPHA 0.25 //prev 0.10 (changed 07/02)
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
 #define OSCILLATION 0
-#define HYSTERESIS DUTY_CYCLE_TARGET*5/100
+//#define HYSTERESIS DUTY_CYCLE_TARGET*5/100
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
@@ -92,9 +92,11 @@ uint16_t periodic_dc, objective_dc, weighted_dc;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
 #endif /*WITH_ORPL_LB*/
+#define WITH_SFD_COMPUTATION 1
+#if WITH_SFD_COMPUTATION
 uint32_t packet_seen_count=0;  //MF-sfd
 uint32_t sfd_decoded_count=0;  //MF-sfd
-
+#endif
 
 #if WITH_ORPL
 
@@ -455,7 +457,9 @@ powercycle(struct rtimer *t, void *ptr)
 
   while(1) {
     static uint8_t packet_seen;
+#if WITH_SFD_COMPUTATION
     static uint8_t sfd_decoded;//MF-sfd
+#endif
     static rtimer_clock_t t0;
     static uint8_t count;
 
@@ -478,7 +482,9 @@ powercycle(struct rtimer *t, void *ptr)
 #endif
 
     packet_seen = 0;
+#if WITH_SFD_COMPUTATION
 		sfd_decoded = 0;//MF-sfd
+#endif
     for(count = 0; count < CCA_COUNT_MAX; ++count) {
       t0 = RTIMER_NOW();
       if(we_are_sending == 0 && we_are_receiving_burst == 0) {
@@ -527,7 +533,9 @@ powercycle(struct rtimer *t, void *ptr)
         ++periods;
 
         if(NETSTACK_RADIO.receiving_packet()) {
+#if WITH_SFD_COMPUTATION
         	sfd_decoded = 1;//MF-sfd
+#endif
           silence_periods = 0;
         }
         if(silence_periods > MAX_SILENCE_PERIODS) {
@@ -542,7 +550,9 @@ powercycle(struct rtimer *t, void *ptr)
           break;
         }
         if(NETSTACK_RADIO.pending_packet()) {
+#if WITH_SFD_COMPUTATION
         	sfd_decoded = 1;//MF-sfd
+#endif
           break;
         }
 
@@ -558,6 +568,8 @@ powercycle(struct rtimer *t, void *ptr)
         }
       }
     }
+
+#if WITH_SFD_COMPUTATION
     /*//MF_sfd*/
     if(packet_seen) {
       packet_seen_count++;
@@ -565,6 +577,7 @@ powercycle(struct rtimer *t, void *ptr)
     if(sfd_decoded) {
       sfd_decoded_count++;
     }/*MF-sfd*/
+#endif
 
     if(RTIMER_CLOCK_LT(RTIMER_NOW() - cycle_start, CYCLE_TIME - CHECK_TIME * 4)) {
       /* Schedule the next powercycle interrupt, or sleep the mcu
@@ -699,7 +712,7 @@ managecycle(void *ptr)
         }
         cycle_time=temp_cycle;
       }
-      printf (" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+      PRINTF (" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
 #if !OSCILLATION
     if((cpt+1)%4 == 0){//here cause if not we never go through this one without LB
@@ -719,7 +732,9 @@ managecycle(void *ptr)
 
     //ANNOTATE("#A int=%lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     //printf("cc2420: seen %lu decoded %lu (%lu %%)\n", packet_seen_count, sfd_decoded_count, packet_seen_count ? (100*sfd_decoded_count) / packet_seen_count : 0);
+#if WITH_SFD_COMPUTATION
     printf("cc2420: seen %lu decoded %lu\n", packet_seen_count, sfd_decoded_count);
+#endif
     ctimer_reset(&ct);
   }
 }

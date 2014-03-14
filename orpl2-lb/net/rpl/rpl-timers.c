@@ -47,8 +47,7 @@
 #include "orpl.h"
 #endif /* WITH_ORPL */
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
-//uint16_t wu_target=500;
-
+uint16_t wu_target=500;
 uint8_t dc_min=30;//0.30
 uint8_t dc_max=100;//1.00
 uint8_t dc_fixed=0;
@@ -162,38 +161,43 @@ handle_dio_timer(void *ptr)
   if(instance->dio_send) {
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
   if(orpl_is_root()){
-    //    if(dc_obj_metric >= wu_target+50){
-    //      dc_min=dio_dc_objective+5;
-    //    }
-    //    else if(dc_obj_metric <= wu_target-50){
-    //      dc_max=dio_dc_objective-5;
-    //    }
-    //    dio_dc_objective=dc_min+(dc_max-dc_min)/2;
-    //    dio_dc_obj_sn=dio_dc_obj_sn++;
+    if(dc_obj_metric !=wu_target){
+        if(dc_obj_metric >= wu_target+50){
+          dc_min=dio_dc_objective+5;
+        }
+        else if(dc_obj_metric <= wu_target-50){
+          dc_max=dio_dc_objective-5;
+        }
+        dio_dc_objective=dc_min+(dc_max-dc_min)/2;
+        dio_dc_obj_sn=dio_dc_obj_sn++;
+    }
+       ORPL_LOG("ORPL_LB: dc_obj %u-%u-%u  %u\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
+        dc_obj_metric=0;//reset (normally not needed)
+        dc_obj_count=0;//reset
 
-    if(dc_obj_metric !=0 && dc_fixed!=2){
-        if(dc_obj_metric < prev){
-            dio_dc_objective=dio_dc_objective-5;
-            if(dc_fixed==1){//previous step was decrease
-              dc_fixed==0;
-            }
-        }
-        else if(dc_obj_metric > prev){
-            dc_fixed++;
-            if(dc_fixed==2){
-              dio_dc_objective=dio_dc_objective + 5;
-            }
-        }
-        prev=dc_obj_metric;
-    }
-    else{
-      dio_dc_objective=dc_min+(dc_max-dc_min)/2;
-      prev=dio_dc_objective;
-    }
-    printf("ORPL_LB: dc_objective %u-%u-%u  %u\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
-    dio_dc_obj_sn=dio_dc_obj_sn++;
-    dc_obj_metric=0;//reset (normally not needed)
-    dc_obj_count=0;//reset
+//    if(dc_obj_metric !=0 && dc_fixed!=2){
+//        if(dc_obj_metric < prev){
+//            dio_dc_objective=dio_dc_objective-5;
+//            if(dc_fixed==1){//previous step was decrease
+//              dc_fixed==0;
+//            }
+//        }
+//        else if(dc_obj_metric > prev){
+//            dc_fixed++;
+//            if(dc_fixed==2){
+//              dio_dc_objective=dio_dc_objective + 5;
+//            }
+//        }
+//        prev=dc_obj_metric;
+//    }
+//    else{
+//      dio_dc_objective=dc_min+(dc_max-dc_min)/2;
+//      prev=dio_dc_objective;
+//    }
+//    printf("ORPL_LB: dc_objective %u-%u-%u  %u\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
+//    dio_dc_obj_sn=dio_dc_obj_sn++;
+//    dc_obj_metric=0;//reset (normally not needed)
+//    dc_obj_count=0;//reset
 
   }
 #endif
