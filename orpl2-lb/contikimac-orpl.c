@@ -92,7 +92,7 @@ uint16_t periodic_dc, objective_dc, weighted_dc;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
 #endif /*WITH_ORPL_LB*/
-#define WITH_SFD_COMPUTATION 1
+#define WITH_SFD_COMPUTATION 0
 #if WITH_SFD_COMPUTATION
 uint32_t packet_seen_count=0;  //MF-sfd
 uint32_t sfd_decoded_count=0;  //MF-sfd
@@ -712,7 +712,7 @@ managecycle(void *ptr)
         }
         cycle_time=temp_cycle;
       }
-      PRINTF (" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+     PRINTF (" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
 #if !OSCILLATION
     if((cpt+1)%4 == 0){//here cause if not we never go through this one without LB

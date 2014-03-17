@@ -52,7 +52,8 @@ uint8_t dc_min=30;//0.30
 uint8_t dc_max=100;//1.00
 uint8_t dc_fixed=0;
 uint16_t prev;
-extern uint16_t dc_obj_metric, dc_obj_count;
+extern uint32_t dc_obj_metric;
+extern uint16_t dc_obj_count;
 #endif
 
 #if UIP_CONF_IPV6
@@ -161,17 +162,18 @@ handle_dio_timer(void *ptr)
   if(instance->dio_send) {
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
   if(orpl_is_root()){
-    if(dc_obj_metric !=wu_target){
-        if(dc_obj_metric >= wu_target+50){
-          dc_min=dio_dc_objective+5;
+    if(dc_obj_metric !=0){
+
+        if((uint16_t)dc_obj_metric >= wu_target+50){
+          dc_min=dio_dc_objective+1;
         }
-        else if(dc_obj_metric <= wu_target-50){
-          dc_max=dio_dc_objective-5;
+        else if((uint16_t)dc_obj_metric <= wu_target-50){
+          dc_max=dio_dc_objective-1;
         }
         dio_dc_objective=dc_min+(dc_max-dc_min)/2;
-        dio_dc_obj_sn=dio_dc_obj_sn++;
     }
-       ORPL_LOG("ORPL_LB: dc_obj %u-%u-%u  %u\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
+        dio_dc_obj_sn=dio_dc_obj_sn++;
+       ORPL_LOG("ORPL_LB: dc_obj %u-%u-%u  %lu\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
         dc_obj_metric=0;//reset (normally not needed)
         dc_obj_count=0;//reset
 

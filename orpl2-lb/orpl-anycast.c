@@ -47,6 +47,11 @@
 #include <string.h>
 
 #if WITH_ORPL
+
+#if WITH_BOOST_CPU
+uint16_t cpu1, cpu2;
+#endif /*WITH_BOOST_CPU*/
+
 extern uint8_t queuebuf_len, queuebuf_ref_len, queuebuf_max_len;
 
 /* The different link-layer addresses used for anycast */
@@ -109,13 +114,25 @@ orpl_softack_input_callback(const uint8_t *frame, uint8_t framelen, uint8_t **ac
 
 	if(is_data) {
 		if(ack_required) { /* This is unicast or unicast, parse it */
-			do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
+			//do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
 #if WITH_ORPL_LOADCTRL
 		  printf("plop %u/%u\n", queuebuf_len, queuebuf_max_len);
 		  do_ack = (orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack && queuebuf_len < queuebuf_max_len);
-#else
+#else /*WITH_ORPL_LOADCTRL*/
+#if WITH_BOOST_CPU
+/* Temporarily boost CPU speed */
+cpu1 = DCOCTL;
+cpu2 = BCSCTL1;
+DCOCTL = 0xff;
+BCSCTL1 |= 0x07;
+#endif /* WITH_BOOST_CPU */
 		  do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
-#endif
+#if WITH_BOOST_CPU
+/* Restore CPU speed */
+DCOCTL = cpu1;
+BCSCTL1 = cpu2;
+#endif /* WITH_BOOST_CPU */
+#endif /*WITH_ORPL_LOADCTRL*/
 		} else { /* We also ack broadcast, even if we didn't modify the framer
 		and still send them with ack_required unset */
 			if(seqno != last_acked_seqno) {

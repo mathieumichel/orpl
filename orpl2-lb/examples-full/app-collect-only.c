@@ -62,7 +62,7 @@ PROCESS(unicast_sender_process, "ORPL -- Collect-only Application");
 AUTOSTART_PROCESSES(&unicast_sender_process);
 /*---------------------------------------------------------------------------*/
 
-uint16_t dc_obj_metric=0;
+uint32_t dc_obj_metric=0;
 uint16_t dc_obj_count=0;
 static void
 receiver(struct simple_udp_connection *c,
@@ -74,11 +74,11 @@ receiver(struct simple_udp_connection *c,
          uint16_t datalen)
 {
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
-  uint16_t temp=((struct app_data *)data)->dc_metric;
+  uint32_t temp=((struct app_data *)data)->dc_metric;
   if(temp!=0){
   dc_obj_count+=1;
   dc_obj_metric=(temp + (dc_obj_count-1) * dc_obj_metric)/dc_obj_count;
-  //printf("ORPL_LB: dc_metric %u-%u\n",dc_obj_metric,temp);
+  printf("ORPL_LB: dc_metric %lu-%u\n",dc_obj_metric,temp);
   }
 #endif
   ORPL_LOG_FROM_APPDATAPTR((struct app_data *)data, "App: received");
@@ -124,7 +124,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
     uint16_t mymac = rimeaddr_node_addr.u8[7] << 8 | rimeaddr_node_addr.u8[6];
-    printf("Node id unset, my mac is 0x%04x\n", mymac);
+    //printf("Node id unset, my mac is 0x%04x\n", mymac);
     PROCESS_EXIT();
   }
 
@@ -133,7 +133,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #if !WITH_ORPL_LB //the load balancing function included the calcul of the duty cycle
   simple_energest_start();
 #endif /*!WITH_ORPL_LB*/
-  printf("App: %u starting\n", node_id);
+ // printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
   orpl_init(&global_ipaddr, node_id == ROOT_ID, 1);
