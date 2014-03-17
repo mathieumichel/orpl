@@ -84,7 +84,7 @@ log_appdataptr(struct app_data *dataptr)
 
     printf(" [%lx %u_%u %u->%u]",
         data.seqno,
-        data.hop,
+        data.hopcount,//data.hop, //added by macfly to use ttl from ipv6 header as hopcount
         data.fpcount,
         data.src,
         data.dest

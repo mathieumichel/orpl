@@ -47,6 +47,7 @@ struct app_data {
   uint8_t ping;
   uint8_t fpcount;
   uint16_t dc_metric;
+  uint8_t hopcount;//MF
 };
 
 /* Copy an appdata to another with no assumption that the addresses are aligned */

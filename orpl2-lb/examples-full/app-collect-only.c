@@ -45,6 +45,8 @@
 #include "cc2420.h"
 #include <stdio.h>
 
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])//added by macfly to use ttl from ipv6 header as hopcount
+
 #include "contikimac-orpl.h"
 
 #if WITH_VARIABLE_TXRATE
@@ -81,7 +83,10 @@ receiver(struct simple_udp_connection *c,
   printf("ORPL_LB: dc_metric %lu-%u\n",dc_obj_metric,temp);
   }
 #endif
+  //printf("hop count test %u\n",uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1);
+  ((struct app_data *)data)->hopcount=uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;//added by macfly to use ttl from ipv6 header as hopcount
   ORPL_LOG_FROM_APPDATAPTR((struct app_data *)data, "App: received");
+
 }
 /*---------------------------------------------------------------------------*/
 void app_send_to(uint16_t id) {
@@ -101,13 +106,14 @@ void app_send_to(uint16_t id) {
 #endif
   //data.wuint = averageWUratio;
   set_ipaddr_from_id(&dest_ipaddr, id);
-
+  data.hopcount=0;//added by macfly to use ttl from ipv6 header as hopcount
   ORPL_LOG_FROM_APPDATAPTR(&data, "App: sending");
 
   orpl_set_curr_seqno(data.seqno);
   set_ipaddr_from_id(&dest_ipaddr, id);
 
   *((struct app_data*)buf) = data;
+
   simple_udp_sendto(&unicast_connection, buf, sizeof(buf) + 1, &dest_ipaddr);
 
   cnt++;

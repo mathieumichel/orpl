@@ -54,7 +54,7 @@
 
 #define WITH_VARIABLE_TXRATE 0
 
-#define WITH_BOOST_CPU 1
+#define WITH_BOOST_CPU 0
 
 
 #else /*WITH_ORPL*/
