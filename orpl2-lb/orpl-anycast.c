@@ -45,6 +45,7 @@
 #include "cc2420-softack.h"
 #include "net/mac/frame802154.h"
 #include <string.h>
+#include "orpl-neighbors.h"
 
 #include "cooja-debug.h"
 
@@ -273,7 +274,8 @@ orpl_anycast_parse_802154_frame(uint8_t *data, uint8_t len, int set_dest_addr)
          * we it is in subdodag and we have a worse rank */
         if(!orpl_blacklist_contains(ret.seqno)){
           //COOJA_DEBUG_PRINTF("check1\n");
-          if(orpl_is_reachable_neighbor(&dest_ipv6)){
+          //if(orpl_is_reachable_neighbor(&dest_ipv6)){
+          if(exist(&dest_ipv6)){//hack
             //COOJA_DEBUG_PRINTF("gotcha\n");
             ret.do_ack = 1;
           }

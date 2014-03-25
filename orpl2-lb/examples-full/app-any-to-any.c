@@ -58,7 +58,7 @@ static uint16_t current_cnt = 0;
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-  1, 17, 28, 50, 56, 74, 121, 124, 126,
+  1, 17, 22, 50, 56, 74, 121, 124, 126,
 #elif IN_COOJA
   1, 2, 4, 6, 8, 10,
 #endif
@@ -141,7 +141,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
     uint16_t mymac = rimeaddr_node_addr.u8[7] << 8 | rimeaddr_node_addr.u8[6];
-    printf("Node id unset, my mac is 0x%04x\n", mymac);
+    //printf("Node id unset, my mac is 0x%04x\n", mymac);
     PROCESS_EXIT();
   }
 
@@ -150,14 +150,13 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #if !WITH_ORPL_LB
   simple_energest_start();
 #endif
-  printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
   orpl_init(&global_ipaddr, node_id == ROOT_ID, 0);
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
 
-  printf("App: %u starting\n", node_id);
+  //printf("App: %u starting\n", node_id);
 
   if(node_id == ROOT_ID) {
     NETSTACK_RDC.off(1);

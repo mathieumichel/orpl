@@ -185,7 +185,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>264</width>
-    <z>2</z>
+    <z>1</z>
     <height>203</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -208,12 +208,12 @@
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter>ID:3</filter>
+      <filter>-&gt;</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
-    <width>675</width>
-    <z>1</z>
+    <width>722</width>
+    <z>2</z>
     <height>479</height>
     <location_x>260</location_x>
     <location_y>3</location_y>
@@ -234,7 +234,7 @@
       <showRadioRXTX />
       <showRadioHW />
       <split>-1</split>
-      <zoomfactor>200.0</zoomfactor>
+      <zoomfactor>1000.0</zoomfactor>
     </plugin_config>
     <width>1297</width>
     <z>3</z>
@@ -264,7 +264,7 @@
  *  Mote mote, int id, String msg&#xD;
  */&#xD;
 &#xD;
-TIMEOUT(350000);&#xD;
+TIMEOUT(3600000);&#xD;
 &#xD;
 while (true) {&#xD;
   log.log(time + ":" + id + ":" + msg + "\n");&#xD;

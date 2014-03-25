@@ -610,9 +610,19 @@ powercycle(struct rtimer *t, void *ptr)
 
 /*---------------------------------------------------------------------------*/
 #if WITH_ORPL_LB
-static void
-managecycle(void *ptr)
-{
+static void setLoadBalancing(int mode){
+  loadbalancing_is_on=mode;
+#if CHANGE_STROBE_TIME
+  if(loadbalancing_is_on){
+      default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
+  }
+  else{
+    default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
+  }
+#endif
+}
+
+static void managecycle(void *ptr){
   if(contikimac_is_on)
   {
     static uint16_t cpt;
@@ -639,7 +649,7 @@ managecycle(void *ptr)
     if(cpt==0){
       // !!!! for target 50=0.50, 110= 1.10,...
       //ORPL_LOG("ORPL_LB : target=%u, max=%lu ms, step=%lu ms, guard=%u check, strobeTime=%u, alpha=%u %\n",(uint16_t)(DUTY_CYCLE_TARGET*100ul),CYCLE_MAX* 1000/RTIMER_ARCH_SECOND,CYCLE_STEP_MAX*1000/RTIMER_ARCH_SECOND,LB_GUARD_TIME,CHANGE_STROBE_TIME, (uint16_t)(DC_ALPHA*100ul));
-      ORPL_LOG("ORPL_LB : step=%lu ms, alpha=%u %\n",CYCLE_STEP_MAX*1000/RTIMER_ARCH_SECOND, (uint16_t)(DC_ALPHA*100ul));
+      //ORPL_LOG("ORPL_LB : step=%lu ms, alpha=%u %\n",CYCLE_STEP_MAX*1000/RTIMER_ARCH_SECOND, (uint16_t)(DC_ALPHA*100ul));
     }
 
 #if OSCILLATION
@@ -649,7 +659,7 @@ managecycle(void *ptr)
 #endif
 
       periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
-      periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
+      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
@@ -678,9 +688,9 @@ managecycle(void *ptr)
 //      printf(" - %lu.%lu%lu",temp1,temp2,temp3);
       printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
 
-#if CHANGE_STROBE_TIME
-      default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
-#endif
+//#if CHANGE_STROBE_TIME
+//      default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
+//#endif
       if(weighted_dc > objective_dc + 5 || weighted_dc < objective_dc - 5){
       //if((weighted_dc > objective_dc + 2 && periodic_dc > objective_dc + 2) || (weighted_dc < objective_dc - 2 && periodic_dc < objective_dc -2)){
         uint32_t temp_cycle;
@@ -712,7 +722,7 @@ managecycle(void *ptr)
         }
         cycle_time=temp_cycle;
       }
-     PRINTF (" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+     printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
 #if !OSCILLATION
     if((cpt+1)%4 == 0){//here cause if not we never go through this one without LB
@@ -1400,7 +1410,7 @@ init(void)
 #if WITH_ORPL_LB
   ctimer_set(&ct, LB_DATAPERIOD,
              (void (*)(void *))managecycle, NULL);
-  loadbalancing_is_on=1;
+  setLoadBalancing(1);
 #endif /* WITH_ORPL_LB*/
 
 #if WITH_PHASE_OPTIMIZATION

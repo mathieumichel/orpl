@@ -59,7 +59,6 @@ static uint16_t compteur=0;
 static char buf[APP_PAYLOAD_LEN];
 static struct simple_udp_connection unicast_connection;
 
-extern int loadbalancing_is_on;//must be available for app-collect-only-2X
 static uint16_t compteur=0;
 
 /*---------------------------------------------------------------------------*/
@@ -136,7 +135,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   simple_energest_start();
 #endif /*!WITH_ORPL_LB*/
   printf("App: %u starting\n", node_id);
-  loadbalancing_is_on=0;
+  setLoadBalancing(0);
   deployment_init(&global_ipaddr);
   orpl_init(&global_ipaddr, node_id == ROOT_ID, 1);
   simple_udp_register(&unicast_connection, UDP_PORT,
@@ -162,7 +161,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
       compteur+=4;
       if(compteur+2>=58 && loadbalancing_is_on==0)//(14*4)=56 and we need to consider the two minutes offset
       {
-        loadbalancing_is_on=1;
+        setLoadBalancing(1);
         printf("App: LB enabled!\n");
       }
     }
