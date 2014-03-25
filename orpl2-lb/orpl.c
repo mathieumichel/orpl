@@ -46,8 +46,10 @@
 #include "net/rpl/rpl-private.h"
 #include "lib/random.h"
 #include <string.h>
+#include "cooja-debug.h"
+#include "orpl-neighbors.h"
 
-#if WITH_ORPL
+#if 1//WITH_ORPL
 
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
 uint8_t dio_dc_objective=100;// 8bit so NOT > 2.56 % (256)
@@ -229,15 +231,24 @@ orpl_is_reachable_neighbor(const uip_ipaddr_t *ipaddr)
 {
   uip_ipaddr_t llipaddr;
   llipaddr_from_global_ipaddr(&llipaddr, ipaddr);
+  //COOJA_DEBUG_PRINTF("check2A\n");
+  //uip_debug_ipaddr_print(&llipaddr);
+  //printf("\n");
   /* We don't consider neighbors as reachable before we have send
    * at least 4 broadcasts to estimate link quality */
   if(ipaddr != NULL && orpl_broadcast_count >= 4) {
     uint16_t bc_count = rpl_get_parent_bc_ackcount_default(
         uip_ds6_nbr_lladdr_from_ipaddr((uip_ipaddr_t *)&llipaddr), 0);
+    //COOJA_DEBUG_PRINTF("check2B\n");
     return 100*bc_count/orpl_broadcast_count >= NEIGHBOR_PRR_THRESHOLD;
   } else {
     return 0;
   }
+  exist((uip_ipaddr_t *)ipaddr);
+//  uint16_t id =node_id_from_ipaddr(&ipaddr);
+//  rimeaddr_t addr;
+//  memset(&addr, 0, sizeof(rimeaddr_t));
+//  memcpy(addr.u8, ds2411_id, sizeof(addr.u8));
 }
 
 /* Returns 1 if addr is the global ip of a reachable child */

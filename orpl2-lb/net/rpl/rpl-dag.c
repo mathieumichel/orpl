@@ -128,7 +128,9 @@ rpl_set_parent_rank(uip_lladdr_t *addr, rpl_rank_t rank)
 uint16_t
 rpl_get_parent_bc_ackcount_default(uip_lladdr_t *addr, uint16_t default_value)
 {
+
   rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
+
   if(p != NULL) {
     return p->bc_ackcount;
   } else {
@@ -1301,7 +1303,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     if(!orpl_is_root() && (dio->dc_target_sn > dio_dc_obj_sn) && dio_dc_objective != dio->dc_target && dio->dc_target != 0){
       dio_dc_objective=dio->dc_target;
       dio_dc_obj_sn=dio->dc_target_sn;
-      printf("ORPL_LB: dc_target %u\n",dio_dc_objective);
+      //printf("ORPL_LB: dc_target %u\n",dio_dc_objective);
     }
 #endif
 

@@ -88,7 +88,7 @@ static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
 static uint32_t delta_tx_bis, delta_rx_bis, delta_time_bis;
 uint16_t periodic_dc, objective_dc, weighted_dc;
-//uint16_t periodic_tx_dc=0;
+uint16_t periodic_tx_dc=0;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
 #endif /*WITH_ORPL_LB*/
@@ -649,7 +649,7 @@ managecycle(void *ptr)
 #endif
 
       periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
-      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
+      periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){

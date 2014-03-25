@@ -76,11 +76,12 @@ receiver(struct simple_udp_connection *c,
          uint16_t datalen)
 {
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
-  uint32_t temp=((struct app_data *)data)->dc_metric;
+  uint32_t temp=(uint32_t)(((struct app_data *)data)->dc_metric);
   if(temp!=0){
-  dc_obj_count+=1;
-  dc_obj_metric=(temp + (dc_obj_count-1) * dc_obj_metric)/dc_obj_count;
-  printf("ORPL_LB: dc_metric %lu-%u\n",dc_obj_metric,temp);
+  //dc_obj_metric=(temp + ((uint32_t)(dc_obj_count)) * dc_obj_metric)/(uint32_t)(dc_obj_count+1);
+  dc_obj_metric+=temp;
+    dc_obj_count+=1;
+  printf("ORPL_LB: dc_metric %lu-%lu\n",dc_obj_metric,temp);
   }
 #endif
   //printf("hop count test %u\n",uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1);
@@ -101,8 +102,8 @@ void app_send_to(uint16_t id) {
   data.hop = 0;
   data.fpcount = 0;
 #if WITH_ORPL_LB & WITH_ORPL_LB_DIO_TARGET
-  data.dc_metric=cycle_time* 1000/RTIMER_ARCH_SECOND;
-  //data.dc_metric=periodic_tx_dc;
+  //data.dc_metric=cycle_time* 1000/RTIMER_ARCH_SECOND;
+  data.dc_metric=periodic_tx_dc;
 #endif
   //data.wuint = averageWUratio;
   set_ipaddr_from_id(&dest_ipaddr, id);
@@ -130,7 +131,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
     uint16_t mymac = rimeaddr_node_addr.u8[7] << 8 | rimeaddr_node_addr.u8[6];
-    //printf("Node id unset, my mac is 0x%04x\n", mymac);
+    printf("Node id unset, my mac is 0x%04x\n", mymac);
     PROCESS_EXIT();
   }
 
@@ -139,7 +140,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #if !WITH_ORPL_LB //the load balancing function included the calcul of the duty cycle
   simple_energest_start();
 #endif /*!WITH_ORPL_LB*/
- // printf("App: %u starting\n", node_id);
+ printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
   orpl_init(&global_ipaddr, node_id == ROOT_ID, 1);

@@ -185,7 +185,7 @@
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>264</width>
-    <z>1</z>
+    <z>2</z>
     <height>203</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -200,7 +200,7 @@
       <viewport>0.8641611968910323 0.0 0.0 0.8641611968910323 -99.91643075931556 129.7012879380052</viewport>
     </plugin_config>
     <width>238</width>
-    <z>3</z>
+    <z>4</z>
     <height>310</height>
     <location_x>6</location_x>
     <location_y>204</location_y>
@@ -208,12 +208,12 @@
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter>6:6:6</filter>
+      <filter>ID:3</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
     <width>675</width>
-    <z>0</z>
+    <z>1</z>
     <height>479</height>
     <location_x>260</location_x>
     <location_y>3</location_y>
@@ -237,7 +237,7 @@
       <zoomfactor>200.0</zoomfactor>
     </plugin_config>
     <width>1297</width>
-    <z>2</z>
+    <z>3</z>
     <height>208</height>
     <location_x>77</location_x>
     <location_y>437</location_y>
@@ -249,10 +249,34 @@
       <analyzers name="6lowpan" />
     </plugin_config>
     <width>450</width>
-    <z>4</z>
+    <z>5</z>
     <height>511</height>
     <location_x>826</location_x>
     <location_y>-2</location_y>
+  </plugin>
+  <plugin>
+    se.sics.cooja.plugins.ScriptRunner
+    <plugin_config>
+      <script>/*&#xD;
+ * Example Contiki test script (JavaScript).&#xD;
+ * A Contiki test script acts on mote output, such as via printf()'s.&#xD;
+ * The script may operate on the following variables:&#xD;
+ *  Mote mote, int id, String msg&#xD;
+ */&#xD;
+&#xD;
+TIMEOUT(350000);&#xD;
+&#xD;
+while (true) {&#xD;
+  log.log(time + ":" + id + ":" + msg + "\n");&#xD;
+  YIELD();&#xD;
+}</script>
+      <active>true</active>
+    </plugin_config>
+    <width>600</width>
+    <z>0</z>
+    <height>700</height>
+    <location_x>150</location_x>
+    <location_y>150</location_y>
   </plugin>
 </simconf>
 

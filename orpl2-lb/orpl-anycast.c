@@ -46,6 +46,8 @@
 #include "net/mac/frame802154.h"
 #include <string.h>
 
+#include "cooja-debug.h"
+
 #if WITH_ORPL
 
 #if WITH_BOOST_CPU
@@ -266,14 +268,30 @@ orpl_anycast_parse_802154_frame(uint8_t *data, uint8_t len, int set_dest_addr)
           }
         }
       } else if(ret.direction == direction_down) {
+        //COOJA_DEBUG_PRINTF("check0\n");
         /* Routing downwards. ACK if destination is reachable neighbor or
          * we it is in subdodag and we have a worse rank */
-        if(!orpl_blacklist_contains(ret.seqno)
-            && (orpl_is_reachable_neighbor(&dest_ipv6)
-                || (curr_edc > ORPL_EDC_W && curr_edc - ORPL_EDC_W > ret.neighbor_edc
-                && orpl_routing_set_contains(&dest_ipv6)))) {
-          ret.do_ack = 1;
+        if(!orpl_blacklist_contains(ret.seqno)){
+          //COOJA_DEBUG_PRINTF("check1\n");
+          if(orpl_is_reachable_neighbor(&dest_ipv6)){
+            //COOJA_DEBUG_PRINTF("gotcha\n");
+            ret.do_ack = 1;
+          }
+          else if(curr_edc > ORPL_EDC_W && curr_edc - ORPL_EDC_W > ret.neighbor_edc)
+          {
+            //COOJA_DEBUG_PRINTF("check2\n");
+            if(orpl_routing_set_contains(&dest_ipv6)){
+              ret.do_ack = 1;
+            }
+          }
         }
+//        if(!orpl_blacklist_contains(ret.seqno)
+//            && (orpl_is_reachable_neighbor(&dest_ipv6)
+//                || (curr_edc > ORPL_EDC_W && curr_edc - ORPL_EDC_W > ret.neighbor_edc
+//                && orpl_routing_set_contains(&dest_ipv6)))) {
+//          ret.do_ack = 1;
+//        }
+        //COOJA_DEBUG_PRINTF("check5\n");
 
       } else if(ret.direction == direction_recover) {
         /* This packet is sent back from a child that experiences false positive. Only
