@@ -58,9 +58,10 @@ static uint16_t current_cnt = 0;
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-  1, 17, 22, 50, 56, 74, 121, 124, 126,
+    1, 22, 50, 56, 78, 121, 124, 118,
+  //1, 17 , 22, 50, 56, 74, 121, 124, 126,
 #elif IN_COOJA
-  1, 2, 4, 6, 8, 10,
+    1, 2, 4, 6, 8, 10,
 #endif
   0
 };
@@ -161,7 +162,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   if(node_id == ROOT_ID) {
     NETSTACK_RDC.off(1);
   } else if(is_id_in_any_to_any(get_node_id())) {
-    etimer_set(&periodic_timer, 4 * 60 * CLOCK_SECOND);
+    etimer_set(&periodic_timer, 12 * 60 * CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
 

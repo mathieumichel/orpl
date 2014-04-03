@@ -46,7 +46,6 @@
 #include "net/rpl/rpl-private.h"
 #include "lib/random.h"
 #include <string.h>
-#include "cooja-debug.h"
 #include "orpl-neighbors.h"
 
 #if WITH_ORPL
@@ -236,7 +235,9 @@ orpl_is_reachable_neighbor(const uip_ipaddr_t *ipaddr)
   if(ipaddr != NULL && orpl_broadcast_count >= 4) {
     uint16_t bc_count = rpl_get_parent_bc_ackcount_default(
         uip_ds6_nbr_lladdr_from_ipaddr((uip_ipaddr_t *)&llipaddr), 0);
-    //COOJA_DEBUG_PRINTF("check2B\n");
+    ORPL_LOG("bcount ");
+    ORPL_LOG_IPADDR((uip_ipaddr_t *)&llipaddr);
+    ORPL_LOG("   %lu\n",100*bc_count/orpl_broadcast_count);
     return 100*bc_count/orpl_broadcast_count >= NEIGHBOR_PRR_THRESHOLD;
   } else {
     return 0;
@@ -375,11 +376,15 @@ udp_received_routing_set(struct simple_udp_connection *c,
   int rnbr=0;
   if(orpl_is_reachable_neighbor(&sender_global_ipaddr)){
     rnbr=1;
-    if(!exist(&sender_global_ipaddr)){
-      addNeighbor(&sender_global_ipaddr);
-    }
+//    if(!exist(&sender_global_ipaddr)){
+//      addNeighbor(&sender_global_ipaddr);
+//    }
+    addNeighbor(&sender_global_ipaddr);
   }
   else{
+    ORPL_LOG("ORPL: cannot insert neighbor into routing set: ");
+    ORPL_LOG_IPADDR(&sender_global_ipaddr);
+    ORPL_LOG("\n");
     removeNeighbor(&sender_global_ipaddr);
   }
   //MF
@@ -440,11 +445,15 @@ orpl_trickle_callback(rpl_instance_t *instance)
 void
 orpl_broadcast_acked(const rimeaddr_t *receiver)
 {
-  uint16_t count = rpl_get_parent_bc_ackcount_default((uip_lladdr_t *)receiver, 0) + 1;
-  if(count > orpl_broadcast_count+1) {
-    count = orpl_broadcast_count+1;
-  }
-  rpl_set_parent_bc_ackcount((uip_lladdr_t *)receiver, count);
+  rpl_incr_parent_bc_ackcount((uip_lladdr_t *)receiver);
+//  uint16_t count = rpl_get_parent_bc_ackcount_default((uip_lladdr_t *)receiver, 0) + 1;
+//  if(count > orpl_broadcast_count+1) {
+//    count = orpl_broadcast_count+1;
+//  }
+////  ORPL_LOG("bcast acked %u ",count);
+////  ORPL_LOG_IPADDR(uip_ds6_nbr_ipaddr_from_lladdr((uip_lladdr_t *)receiver));
+////  ORPL_LOG("\n");
+//  rpl_set_parent_bc_ackcount((uip_lladdr_t *)receiver, count);
 }
 
 /* Callback function at the end of a every broadcast
@@ -452,8 +461,10 @@ orpl_broadcast_acked(const rimeaddr_t *receiver)
 void
 orpl_broadcast_done()
 {
+
   /* Update global broacast count */
   orpl_broadcast_count++;
+  ORPL_LOG("bcast done %u\n", orpl_broadcast_count);
 
   /* Loop over all neighbors and insert the reachable ones into
      out routing set */

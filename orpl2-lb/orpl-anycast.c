@@ -119,8 +119,11 @@ orpl_softack_input_callback(const uint8_t *frame, uint8_t framelen, uint8_t **ac
 		if(ack_required) { /* This is unicast or unicast, parse it */
 			//do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
 #if WITH_ORPL_LOADCTRL
-		  printf("plop %u/%u\n", queuebuf_len, queuebuf_max_len);
+
 		  do_ack = (orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack && queuebuf_len < queuebuf_max_len);
+      if(!do_ack && queuebuf_len >= queuebuf_max_len){
+      printf("plop %u-%u\n", queuebuf_len, queuebuf_max_len);
+      }
 #else /*WITH_ORPL_LOADCTRL*/
 #if WITH_BOOST_CPU
 /* Temporarily boost CPU speed */
@@ -274,18 +277,20 @@ orpl_anycast_parse_802154_frame(uint8_t *data, uint8_t len, int set_dest_addr)
          * we it is in subdodag and we have a worse rank */
         if(!orpl_blacklist_contains(ret.seqno)){
           //COOJA_DEBUG_PRINTF("check1\n");
-          //if(orpl_is_reachable_neighbor(&dest_ipv6)){
-          if(exist(&dest_ipv6)){//hack
-            //COOJA_DEBUG_PRINTF("gotcha\n");
-            ret.do_ack = 1;
-          }
-          else if(curr_edc > ORPL_EDC_W && curr_edc - ORPL_EDC_W > ret.neighbor_edc)
+          if(curr_edc > ORPL_EDC_W && curr_edc - ORPL_EDC_W > ret.neighbor_edc)
           {
             //COOJA_DEBUG_PRINTF("check2\n");
             if(orpl_routing_set_contains(&dest_ipv6)){
+              //printf("gotcha2\n");
               ret.do_ack = 1;
             }
           }
+          //if(orpl_is_reachable_neighbor(&dest_ipv6)){
+          else if(exist(&dest_ipv6)){//hack
+            //printf("gotcha1\n");
+            ret.do_ack = 1;
+          }
+
         }
 //        if(!orpl_blacklist_contains(ret.seqno)
 //            && (orpl_is_reachable_neighbor(&dest_ipv6)

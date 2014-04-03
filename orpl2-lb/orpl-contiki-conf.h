@@ -44,7 +44,7 @@
 
 #if WITH_ORPL
 
-#define WITH_ORPL_LB 1
+#define WITH_ORPL_LB 0
 
 #if WITH_ORPL_LB
 #define WITH_ORPL_LB_DIO_TARGET 0

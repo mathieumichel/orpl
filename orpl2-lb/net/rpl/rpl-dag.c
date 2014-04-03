@@ -125,6 +125,19 @@ rpl_set_parent_rank(uip_lladdr_t *addr, rpl_rank_t rank)
   }
 }
 /*---------------------------------------------------------------------------*/
+void
+rpl_incr_parent_bc_ackcount(uip_lladdr_t *addr){
+  rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
+    if(p != NULL) {
+      if(p->bc_ackcount > orpl_broadcast_count+1){
+        p->bc_ackcount = orpl_broadcast_count+1;
+      }
+      else{
+        p->bc_ackcount = p->bc_ackcount+1;
+      }
+    }
+}
+
 uint16_t
 rpl_get_parent_bc_ackcount_default(uip_lladdr_t *addr, uint16_t default_value)
 {

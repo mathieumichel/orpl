@@ -91,13 +91,14 @@ uint16_t periodic_dc, objective_dc, weighted_dc;
 uint16_t periodic_tx_dc=0;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
+
 #endif /*WITH_ORPL_LB*/
 #define WITH_SFD_COMPUTATION 0
 #if WITH_SFD_COMPUTATION
 uint32_t packet_seen_count=0;  //MF-sfd
 uint32_t sfd_decoded_count=0;  //MF-sfd
 #endif
-
+uint16_t interP=1250;
 #if WITH_ORPL
 
 /* We add a jitter in the ContikiMAC wakeups to avoid having the same collisions repeatedly */
@@ -260,7 +261,7 @@ static int we_are_receiving_burst = 0;
 #ifdef CONTIKIMAC_CONF_INTER_PACKET_INTERVAL
 #define INTER_PACKET_INTERVAL              CONTIKIMAC_CONF_INTER_PACKET_INTERVAL
 #else
-#define INTER_PACKET_INTERVAL              RTIMER_ARCH_SECOND / 2500
+#define INTER_PACKET_INTERVAL              RTIMER_ARCH_SECOND / interP//2500
 #endif
 
 /* AFTER_ACK_DETECTECT_WAIT_TIME is the time to wait after a potential
@@ -659,7 +660,7 @@ static void managecycle(void *ptr){
 #endif
 
       periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
-      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
+      periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
@@ -1001,11 +1002,19 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 #if WITH_ORPL_LB && CHANGE_STROBE_TIME
   if(is_broadcast){
     strobe_time=bcast_strobe_time;
+
   }
   else{
     strobe_time=default_strobe_time;
+
   }
 #endif
+  if(is_broadcast){
+    interP=2500;
+  }
+  else{
+    interP=1250;
+  }
   /* In the broadcast case, we keep sending even after getting an ack */
   for(strobes = 0, collisions = 0;
       (is_broadcast || collisions == 0) &&

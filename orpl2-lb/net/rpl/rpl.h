@@ -259,6 +259,7 @@ rpl_rank_t rpl_get_parent_rank_default(uip_lladdr_t *addr, rpl_rank_t default_va
 void rpl_set_parent_rank(uip_lladdr_t *addr, rpl_rank_t rank);
 uint16_t rpl_get_parent_bc_ackcount_default(uip_lladdr_t *addr, uint16_t default_value);
 void rpl_set_parent_bc_ackcount(uip_lladdr_t *addr, uint16_t bc_ackcount);
+void rpl_incr_parent_bc_ackcount(uip_lladdr_t *addr);
 #endif /* WITH_ORPL */
 /*---------------------------------------------------------------------------*/
 #endif /* RPL_H */

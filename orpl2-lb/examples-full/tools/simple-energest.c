@@ -96,7 +96,7 @@ void simple_energest_step() {
       fraction
   );
 
-  if(cpt % 8 == 0) {
-    orpl_routing_set_print();
-  }
+//  if(cpt % 8 == 0) {
+//    orpl_routing_set_print();
+//  }
 }

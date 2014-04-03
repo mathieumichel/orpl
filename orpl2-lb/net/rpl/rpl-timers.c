@@ -177,13 +177,13 @@ handle_dio_timer(void *ptr)
 //        dc_obj_metric=0;//reset (normally not needed)
 //        dc_obj_count=0;//reset
 
-    dc_obj_metric=dc_obj_metric/dc_obj_count;
+    if(dc_obj_metric !=0){
+      dc_obj_metric=dc_obj_metric/((uint32_t)dc_obj_count);
+    }
     if(dc_obj_metric !=0 && dc_fixed!=2){
         if(dc_obj_metric < prev){
             dio_dc_objective=dio_dc_objective-5;
-            if(dc_fixed==1){//previous step was decrease
-              dc_fixed==0;
-            }
+            dc_fixed==0;//previous step was decrease
         }
         else if(dc_obj_metric > prev){
             dc_fixed++;

@@ -15,7 +15,8 @@ struct orpl_neighbor {
 
 
 void addNeighbor(uip_ipaddr_t *addr);
-int removeNeighbor(uip_ipaddr_t *addr);
+void removeNeighbor(uip_ipaddr_t *addr);
 struct orpl_neighbor* exist (uip_ipaddr_t *addr);
+
 
 #endif /* ORPL_NEIGHBORS_H_ */
