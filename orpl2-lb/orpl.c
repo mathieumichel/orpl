@@ -99,7 +99,7 @@ uint32_t orpl_broadcast_count = 0;
 static uint16_t last_broadcasted_edc = 0xffff;
 
 /* Set to 1 when only upwards routing is enabled */
-//static int orpl_up_only = 0;
+static int orpl_up_only = 0;
 /* A flag that tells whether we are root or not */
 static int is_root_flag = 0;
 
@@ -235,9 +235,9 @@ orpl_is_reachable_neighbor(const uip_ipaddr_t *ipaddr)
   if(ipaddr != NULL && orpl_broadcast_count >= 4) {
     uint16_t bc_count = rpl_get_parent_bc_ackcount_default(
         uip_ds6_nbr_lladdr_from_ipaddr((uip_ipaddr_t *)&llipaddr), 0);
-    ORPL_LOG("bcount ");
-    ORPL_LOG_IPADDR((uip_ipaddr_t *)&llipaddr);
-    ORPL_LOG("   %lu\n",100*bc_count/orpl_broadcast_count);
+//    ORPL_LOG("bcount ");
+//    ORPL_LOG_IPADDR((uip_ipaddr_t *)&llipaddr);
+//    ORPL_LOG("   %lu\n",100*bc_count/orpl_broadcast_count);
     return 100*bc_count/orpl_broadcast_count >= NEIGHBOR_PRR_THRESHOLD;
   } else {
     return 0;
@@ -410,7 +410,6 @@ udp_received_routing_set(struct simple_udp_connection *c,
       ORPL_LOG("\n");
     }
 
-
     /* Broadcast our routing set again if it has changed */
     bit_count_after = orpl_routing_set_count_bits();
     if(curr_instance && bit_count_after != bit_count_before) {
@@ -464,7 +463,7 @@ orpl_broadcast_done()
 
   /* Update global broacast count */
   orpl_broadcast_count++;
-  ORPL_LOG("bcast done %u\n", orpl_broadcast_count);
+  //ORPL_LOG("bcast done %u\n", orpl_broadcast_count);
 
   /* Loop over all neighbors and insert the reachable ones into
      out routing set */

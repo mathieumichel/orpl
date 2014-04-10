@@ -48,7 +48,7 @@
 #include "simple-udp.h"
 #include "cc2420.h"
 #include <stdio.h>
-
+#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])//added by macfly to use ttl from ipv6 header as hopcount
 #define SEND_INTERVAL   (2 * 60 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
@@ -58,10 +58,10 @@ static uint16_t current_cnt = 0;
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-    1, 22, 50, 56, 78, 121, 124, 118,
+    1, 22, 50, 56, 72, 121, 124, 118,
   //1, 17 , 22, 50, 56, 74, 121, 124, 126,
 #elif IN_COOJA
-    1, 2, 4, 6, 8, 10,
+    1, 4, 8, 10, 12, 14,
 #endif
   0
 };
@@ -95,6 +95,7 @@ receiver(struct simple_udp_connection *c,
 {
   struct app_data data;
   appdata_copy(&data, (struct app_data*)dataptr);
+  ((struct app_data *)dataptr)->hopcount=uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;//added by macfly to use ttl from ipv6 header as hopcount
   if(data.ping) {
     ORPL_LOG_FROM_APPDATAPTR((struct app_data *)dataptr, "App: received ping");
   } else {
@@ -117,7 +118,7 @@ app_send_to(uint16_t id, int ping, uint32_t seqno)
   data.hop = 0;
   data.fpcount = 0;
   data.ping = ping;
-
+  data.hopcount=0;//added by macfly to use ttl from ipv6 header as hopcount
   if(ping) {
     ORPL_LOG_FROM_APPDATAPTR(&data, "App: sending ping");
   } else {

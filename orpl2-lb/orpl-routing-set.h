@@ -51,12 +51,12 @@
 #ifdef OPRL_CONF_RS_TYPE
 #define ORPL_RS_TYPE                 OPRL_CONF_RS_TYPE
 #else
-#define ORPL_RS_TYPE                 ORPL_RS_TYPE_BLOOM_SAX
+#define ORPL_RS_TYPE                 ORPL_RS_TYPE_BITMAP//ORPL_RS_TYPE_BLOOM_SAX
 #endif
 
 /* Routing set size (in bits) */
 #ifdef ORPL_CONF_ROUTING_SET_M
-#define ROUTING_SET_M        ORPL_RS_TYPE_BITMAP//ORPL_CONF_ROUTING_SET_M
+#define ROUTING_SET_M        ORPL_CONF_ROUTING_SET_M
 #else
 #define ROUTING_SET_M        512
 #endif

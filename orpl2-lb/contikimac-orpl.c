@@ -1010,7 +1010,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   }
 #endif
   if(is_broadcast){
-    interP=2500;
+    interP=1250;
   }
   else{
     interP=1250;
@@ -1327,6 +1327,7 @@ input_packet(void)
       if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), /* duplicate detection for broadcast only */
                                     &rimeaddr_null))
       {
+        //ORPL_LOG("bcast from %d\n",ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER)));
         int i;
         for(i = 0; i < MAX_SEQNOS_LL; ++i) {
           if(packetbuf_attr(PACKETBUF_ATTR_PACKET_ID) == received_seqnos[i].seqno &&

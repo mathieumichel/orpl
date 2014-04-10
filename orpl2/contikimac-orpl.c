@@ -1126,7 +1126,7 @@ input_packet(void)
 
       PRINTDEBUG("contikimac: data (%u)\n", packetbuf_datalen());
 
-      packetbuf_set_attr(PACKETBUF_ATTR_HOPS,packetbuf_attr(PACKETBUF_ATTR_HOPS)+1)
+      packetbuf_set_attr(PACKETBUF_ATTR_HOPS,packetbuf_attr(PACKETBUF_ATTR_HOPS)+1);
       if(packetbuf_attr(PACKETBUF_ATTR_HOPS) > 128) {
         ORPL_LOG_FROM_PACKETBUF("Cmac: dropping from %d after too many hops", node_id_from_rimeaddr(packetbuf_addr(PACKETBUF_ADDR_SENDER)));
         return;

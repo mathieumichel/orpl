@@ -141,9 +141,7 @@ rpl_incr_parent_bc_ackcount(uip_lladdr_t *addr){
 uint16_t
 rpl_get_parent_bc_ackcount_default(uip_lladdr_t *addr, uint16_t default_value)
 {
-
   rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
-
   if(p != NULL) {
     return p->bc_ackcount;
   } else {
@@ -1260,12 +1258,12 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     }
   }
 
-  if(dio->rank == INFINITE_RANK) {
-    PRINTF("RPL: Ignoring DIO from node with infinite rank: ");
-    PRINT6ADDR(from);
-    PRINTF("\n");
-    return;
-  }//MF ORPL
+//  if(dio->rank == INFINITE_RANK) {
+//    PRINTF("RPL: Ignoring DIO from node with infinite rank: ");
+//    PRINT6ADDR(from);
+//    PRINTF("\n");
+//    return;
+//  }//MF ORPL
 
   if(instance == NULL) {
     PRINTF("RPL: New instance detected: Joining...\n");
@@ -1285,7 +1283,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
            (unsigned)dio->rank);
     return;
   } else if(dio->rank == INFINITE_RANK && dag->joined) {
-    rpl_reset_dio_timer(instance);
+    //rpl_reset_dio_timer(instance); //MF
   }
   
   /* Prefix Information Option treated to add new prefix */

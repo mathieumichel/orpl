@@ -34,7 +34,7 @@
 
 #include "common-conf.h"
 
-#define UP_ONLY 1
+#define UP_ONLY 0
 #define ALL_NODES_ADDRESSABLE 0
 
 #undef RPL_CONF_MOP
