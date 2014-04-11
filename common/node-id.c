@@ -55,7 +55,7 @@ struct id_mac {
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-    1, 22, 50, 56, 78, 121, 124, 118,
+    1, 22, 50, 56, 72, 121, 124, 118,
     //1, 17, 28, 50, 56, 74, 121, 124, 126,
 #elif IN_COOJA
   1, 2, 4, 6, 8, 10,

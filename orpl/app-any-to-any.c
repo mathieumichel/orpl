@@ -131,6 +131,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
       do {
         id = get_node_id(index++);
+        index %= get_n_nodes();
         node_ip6addr(&dest_ipaddr, id);
       } while (id == node_id || !is_id_in_any_to_any(id));
 

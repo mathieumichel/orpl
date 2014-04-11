@@ -59,7 +59,9 @@ static uint16_t current_cnt = 0;
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
     1, 22, 50, 56, 72, 121, 124, 118,
-  //1, 17 , 22, 50, 56, 74, 121, 124, 126,
+    //1, 14, 22, 50, 56, 72, 112, 124
+   // 1, 22, 50, 56, 72, 121, 124, 118,
+
 #elif IN_COOJA
     1, 4, 8, 10, 12, 14,
 #endif
@@ -169,6 +171,8 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
     static uint16_t index;
     index = random_rand();
+//    static uint16_t target_id;
+//    target_id=random_rand();
 
     while(1) {
       etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));

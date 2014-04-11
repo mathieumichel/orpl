@@ -37,7 +37,7 @@
 #define DEPLOYMENT_TWIST        3
 #define DEPLOYMENT_INDRIYA      4
 
-#define DEPLOYMENT DEPLOYMENT_COOJA
+#define DEPLOYMENT DEPLOYMENT_INDRIYA
 
 #define IN_COOJA (DEPLOYMENT == DEPLOYMENT_COOJA)
 #define IN_MOTES (DEPLOYMENT == DEPLOYMENT_MOTES)
@@ -51,7 +51,7 @@
 #define ROOT_ID 137
 //#define ROOT_ID 272
 #elif IN_INDRIYA
-#define ROOT_ID 20
+#define ROOT_ID 1
 #else
 #define ROOT_ID 1
 #endif
