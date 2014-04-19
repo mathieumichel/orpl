@@ -51,7 +51,7 @@
 #ifdef OPRL_CONF_RS_TYPE
 #define ORPL_RS_TYPE                 OPRL_CONF_RS_TYPE
 #else
-#define ORPL_RS_TYPE                 ORPL_RS_TYPE_BITMAP//ORPL_RS_TYPE_BLOOM_SAX
+#define ORPL_RS_TYPE                 ORPL_RS_TYPE_BITMAP
 #endif
 
 /* Routing set size (in bits) */

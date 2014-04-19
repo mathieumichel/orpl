@@ -157,7 +157,7 @@ neighbor_link_callback(rpl_parent_t *parent, int known, int edc)
     }
   }
 }
-
+int count=0;
 static rpl_rank_t
 calculate_rank(rpl_parent_t *parent, rpl_rank_t base_rank)
 {
@@ -205,7 +205,7 @@ calculate_rank(rpl_parent_t *parent, rpl_rank_t base_rank)
       uint16_t ackcount = p->bc_ackcount;
 
       if(rank != 0xffff
-          && ackcount != 0
+          && (count==0 || ackcount != 0)
           && (curr_p == NULL || rank < curr_p_rank)
           && (rank > prev_min_rank || (rank == prev_min_rank && index > prev_index))
       ) {
@@ -215,7 +215,7 @@ calculate_rank(rpl_parent_t *parent, rpl_rank_t base_rank)
         curr_p_ackcount = ackcount;
       }
     }
-
+    count=1;//to avoid to consider the ackount when received the 1st DIO (acked by MF)
     /* Here, curr_p contains the current parent in our ordered lookup */
     if(curr_p) {
       uint16_t curr_id = rpl_get_parent_ipaddr(curr_p)->u8[sizeof(uip_ipaddr_t) - 1];

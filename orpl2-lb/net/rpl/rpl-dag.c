@@ -1258,12 +1258,31 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     }
   }
 
-//  if(dio->rank == INFINITE_RANK) {
-//    PRINTF("RPL: Ignoring DIO from node with infinite rank: ");
-//    PRINT6ADDR(from);
-//    PRINTF("\n");
-//    return;
-//  }//MF ORPL
+  if(dio->rank == INFINITE_RANK) {
+    PRINTF("RPL: Ignoring DIO from node with infinite rank: ");
+    PRINT6ADDR(from);
+    PRINTF("\n");
+
+    //to be sure to add the parent in the parents list
+    p = rpl_find_parent(dag, from);
+    if(p == NULL) {
+      previous_dag = find_parent_dag(instance, from);
+      if(previous_dag == NULL) {
+        /* Add the DIO sender as a candidate parent. */
+        p = rpl_add_parent(dag, dio, from);
+        if(p == NULL) {
+          PRINTF("RPL: Failed to add a new parent (");
+          PRINT6ADDR(from);
+          PRINTF(")\n");
+          return;
+        }
+        PRINTF("RPL: New candidate parent with rank %u: ", (unsigned)p->rank);
+        PRINT6ADDR(from);
+        PRINTF("\n");
+      }
+    }
+    return;
+  }//MF ORPL
 
   if(instance == NULL) {
     PRINTF("RPL: New instance detected: Joining...\n");
@@ -1283,6 +1302,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
            (unsigned)dio->rank);
     return;
   } else if(dio->rank == INFINITE_RANK && dag->joined) {
+    printf("infinite\n");
     //rpl_reset_dio_timer(instance); //MF
   }
   

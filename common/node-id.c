@@ -55,7 +55,7 @@ struct id_mac {
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-    1, 22, 50, 56, 72, 121, 124, 118,
+    1, 22, 50, 56, 72, 126, 124, 118,
     //1, 17, 28, 50, 56, 74, 121, 124, 126,
 #elif IN_COOJA
   1, 2, 4, 6, 8, 10,
@@ -79,7 +79,7 @@ static const struct id_mac id_mac_list[] = {
 };
 
 #if IN_COOJA
-#define N_NODES 8
+#define N_NODES 14
 #else
 #define N_NODES ((sizeof(id_mac_list)/sizeof(struct id_mac))-1)
 #endif

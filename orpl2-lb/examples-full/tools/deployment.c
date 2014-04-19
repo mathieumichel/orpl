@@ -69,7 +69,7 @@ static const struct id_mac id_mac_list[] = {
 
 /* The total number of nodes in the deployment */
 #if IN_COOJA
-#define N_NODES 8
+#define N_NODES 14
 #else
 #define N_NODES ((sizeof(id_mac_list)/sizeof(struct id_mac))-1)
 #endif

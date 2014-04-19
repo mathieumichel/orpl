@@ -58,7 +58,8 @@ static uint16_t current_cnt = 0;
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-    1, 22, 50, 56, 72, 121, 124, 118,
+    1, 22, 50, 56, 72, 126, 124, 118,
+    //1, 22, 50, 56, 72, 121, 124, 118,
     //1, 14, 22, 50, 56, 72, 112, 124
    // 1, 22, 50, 56, 72, 121, 124, 118,
 
@@ -171,19 +172,22 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
     static uint16_t index;
     index = random_rand();
-//    static uint16_t target_id;
-//    target_id=random_rand();
 
     while(1) {
       etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
-      PROCESS_WAIT_UNTIL(etimer_expired(&send_timer));
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
 
-      static uint16_t target_id;
+//      static uint16_t target_id;
+//      do {
+//        get_node_id_from_index(target_id++);
+//        target_id %= get_n_nodes();
+//      } while (target_id == node_id || !is_id_in_any_to_any(target_id));
+      uint16_t target_id;
       do {
-        get_node_id_from_index(target_id++);
-        target_id %= get_n_nodes();
+        target_id=get_node_id_from_index(index++);
+        index %= get_n_nodes();
       } while (target_id == node_id || !is_id_in_any_to_any(target_id));
-
+      //ORPL_LOG("plop %u-%u\n",target_id,get_n_nodes());
       if(target_id < node_id || target_id == ROOT_ID) {
         /* After finding an addressable node, send only if destination has lower ID
          * otherwise, next attempt will be at the next period */
@@ -191,7 +195,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
         current_cnt++;
       }
 
-      PROCESS_WAIT_UNTIL(etimer_expired(&periodic_timer));
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
       etimer_reset(&periodic_timer);
     }
   }

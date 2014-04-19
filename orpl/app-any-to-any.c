@@ -128,13 +128,13 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
       uip_ipaddr_t dest_ipaddr;
       uint16_t id;
-
       do {
         id = get_node_id(index++);
         index %= get_n_nodes();
         node_ip6addr(&dest_ipaddr, id);
       } while (id == node_id || !is_id_in_any_to_any(id));
 
+      printf("plop %u-%u\n",id,get_n_nodes());
       if(id < node_id || id == ROOT_ID) {
         /* After finding an addressable node, send only if destination has lower ID
          * otherwise, next attempt will be at the next period */

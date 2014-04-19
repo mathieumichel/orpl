@@ -373,33 +373,33 @@ udp_received_routing_set(struct simple_udp_connection *c,
 
 
   //MF update the orpl neighbors
-  int rnbr=0;
-  if(orpl_is_reachable_neighbor(&sender_global_ipaddr)){
-    rnbr=1;
+  int is_reachable_neighbor=orpl_is_reachable_neighbor(&sender_global_ipaddr);
+  if(is_reachable_neighbor){
 //    if(!exist(&sender_global_ipaddr)){
 //      addNeighbor(&sender_global_ipaddr);
 //    }
     addNeighbor(&sender_global_ipaddr);
   }
   else{
-    ORPL_LOG("ORPL: cannot insert neighbor into routing set: ");
-    ORPL_LOG_IPADDR(&sender_global_ipaddr);
-    ORPL_LOG("\n");
+//    ORPL_LOG("ORPL: cannot insert neighbor into routing set: ");
+//    ORPL_LOG_IPADDR(&sender_global_ipaddr);
+//    ORPL_LOG("\n");
     removeNeighbor(&sender_global_ipaddr);
   }
   //MF
 
-  if(orpl_are_routing_set_active() && rnbr==1){// orpl_is_reachable_neighbor(&sender_global_ipaddr)) {
+  if(orpl_are_routing_set_active() && is_reachable_neighbor){// orpl_is_reachable_neighbor(&sender_global_ipaddr)) {
     int bit_count_before = orpl_routing_set_count_bits();
     int bit_count_after;
+    uint16_t neighbor_id = node_id_from_ipaddr(&sender_global_ipaddr);//added by MF
     int is_reachable_child = orpl_is_reachable_child(&sender_global_ipaddr);
-
-    if(is_reachable_child || ORPL_ALL_NEIGHBORS_IN_ROUTING_SET) {
+    if((is_reachable_child || ORPL_ALL_NEIGHBORS_IN_ROUTING_SET) && neighbor_id %2 ==0) {
       /* Insert the neighbor in our routing set */
+
       orpl_routing_set_insert(&sender_global_ipaddr);
       ORPL_LOG("ORPL: inserting neighbor into routing set: ");
       ORPL_LOG_IPADDR(&sender_global_ipaddr);
-      ORPL_LOG("\n");
+      ORPL_LOG(" (rx routing set)\n");
     }
 
     if(is_reachable_child) {
@@ -475,12 +475,12 @@ orpl_broadcast_done()
       uip_ipaddr_t *nbr_ipaddr = rpl_get_parent_ipaddr(p);
       uip_ipaddr_t nbr_global_ipaddr;
       global_ipaddr_from_llipaddr(&nbr_global_ipaddr, nbr_ipaddr);
-
-      if(orpl_is_reachable_child(&nbr_global_ipaddr)) {
+      uint16_t neighbor_id = node_id_from_ipaddr(&nbr_global_ipaddr);
+      if(orpl_is_reachable_child(&nbr_global_ipaddr) && neighbor_id%2==0) {
         orpl_routing_set_insert(&nbr_global_ipaddr);
         ORPL_LOG("ORPL: inserting neighbor into routing set: ");
         ORPL_LOG_IPADDR(&nbr_global_ipaddr);
-        ORPL_LOG("\n");
+        ORPL_LOG(" (bcast done)\n");
       }
     }
   }

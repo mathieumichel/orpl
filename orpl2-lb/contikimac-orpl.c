@@ -1010,7 +1010,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   }
 #endif
   if(is_broadcast){
-    interP=1250;
+    interP=2500;
   }
   else{
     interP=1250;
