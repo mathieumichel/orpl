@@ -869,11 +869,11 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr, struct rdc_buf_
 
   if(got_strobe_ack) {
     printf("Cmac: acked by %u s %u c %d", node_id_from_rimeaddr(packetbuf_addr(PACKETBUF_ADDR_RECEIVER)), strobe_duration, collisions);
-    ORPL_LOG(appdataptr_from_packetbuf());
+    rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
   } else {
     if(!is_broadcast) {
       printf("Cmac:! noack s %u c %d", strobe_duration, collisions);
-      ORPL_LOG(appdataptr_from_packetbuf());
+      rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
     }
   }
 
@@ -996,7 +996,7 @@ input_packet(void)
       struct app_data *data = NULL;
       if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
           &rimeaddr_node_addr)) { /* if unicast */
-        data = appdataptr_from_packetbuf();
+        data = rpl_dataptr_from_packetbuf();//appdataptr_from_packetbuf();
       }
 
       /* Check for duplicate packet by comparing the sequence number
@@ -1046,7 +1046,7 @@ input_packet(void)
         data->hop += 1;
         if(data->hop > 128) {
           printf("Cmac:! dropping from %d after too many hops", node_id_from_rimeaddr(packetbuf_addr(PACKETBUF_ADDR_SENDER)));
-          ORPL_LOG(data);
+          rpl_trace(data);//ORPL_LOG(data);
           return;
         }
 
@@ -1068,7 +1068,7 @@ input_packet(void)
 //        }
 
         printf("Cmac: input from %d", node_id_from_rimeaddr(packetbuf_addr(PACKETBUF_ADDR_SENDER)));
-        ORPL_LOG(data);
+        rpl_trace(data);//ORPL_LOG(data);
 
       }
 

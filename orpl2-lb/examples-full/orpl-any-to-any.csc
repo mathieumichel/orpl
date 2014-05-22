@@ -8,7 +8,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
     <title>ORPL -- Any-to-any Application</title>
-    <randomseed>123461</randomseed>
+    <randomseed>generated</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
       se.sics.cooja.radiomediums.UDGM

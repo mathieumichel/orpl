@@ -68,7 +68,7 @@ NET     = netstack.c uip-debug.c packetbuf.c queuebuf.c packetqueue.c
 ifdef UIP_CONF_IPV6
   CFLAGS += -DUIP_CONF_IPV6=1
   UIP   = uip6.c tcpip.c psock.c uip-udp-packet.c uip-split.c \
-          resolv.c tcpdump.c uiplib.c simple-udp.c
+          resolv.c tcpdump.c uiplib.c simple-udp.c rpl-mrhof-qetx.c
   NET   += $(UIP) uip-icmp6.c uip-nd6.c uip-packetqueue.c \
           sicslowpan.c neighbor-attr.c neighbor-info.c uip-ds6.c  uip-ds6-route.c
   ifneq ($(UIP_CONF_RPL),0)

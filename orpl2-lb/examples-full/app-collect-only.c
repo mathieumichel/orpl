@@ -45,7 +45,6 @@
 #include "cc2420.h"
 #include <stdio.h>
 
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])//added by macfly to use ttl from ipv6 header as hopcount
 
 #include "contikimac-orpl.h"
 
@@ -56,7 +55,6 @@ static uint16_t compteur=2;
 #define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
-static char buf[APP_PAYLOAD_LEN];
 static struct simple_udp_connection unicast_connection;
 
 /*---------------------------------------------------------------------------*/
@@ -85,7 +83,6 @@ receiver(struct simple_udp_connection *c,
   }
 #endif
   //printf("hop count test %u\n",uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1);
-  ((struct app_data *)data)->hopcount=uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;//added by macfly to use ttl from ipv6 header as hopcount
   ORPL_LOG_FROM_APPDATAPTR((struct app_data *)data, "App: received");
 
 }
@@ -107,15 +104,12 @@ void app_send_to(uint16_t id) {
 #endif
   //data.wuint = averageWUratio;
   set_ipaddr_from_id(&dest_ipaddr, id);
-  data.hopcount=0;//added by macfly to use ttl from ipv6 header as hopcount
   ORPL_LOG_FROM_APPDATAPTR(&data, "App: sending");
 
   orpl_set_curr_seqno(data.seqno);
   set_ipaddr_from_id(&dest_ipaddr, id);
 
-  *((struct app_data*)buf) = data;
-
-  simple_udp_sendto(&unicast_connection, buf, sizeof(buf) + 1, &dest_ipaddr);
+  simple_udp_sendto(&unicast_connection, &data, sizeof(data), &dest_ipaddr);
 
   cnt++;
 }
@@ -130,8 +124,9 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
-    uint16_t mymac = rimeaddr_node_addr.u8[7] << 8 | rimeaddr_node_addr.u8[6];
-    printf("Node id unset, my mac is 0x%04x\n", mymac);
+    printf("Node id unset, my mac is ");
+    uip_debug_lladdr_print(&rimeaddr_node_addr);
+    printf("\n");
     PROCESS_EXIT();
   }
 

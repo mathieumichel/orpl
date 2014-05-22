@@ -71,7 +71,7 @@ ifdef UIP_CONF_IPV6
           resolv.c tcpdump.c uiplib.c simple-udp.c
   NET   += $(UIP) uip-icmp6.c uip-nd6.c uip-packetqueue.c \
           sicslowpan.c neighbor-attr.c neighbor-info.c uip-ds6.c uip-ds6-route.c \
-          anycast.c rpl-of-edc.c
+          anycast.c rpl-of-edc.c rpl-mrhof-qetx.c orpl-log.c
   ifneq ($(UIP_CONF_RPL),0)
     CFLAGS += -DUIP_CONF_IPV6_RPL=1
     include $(CONTIKI)/core/net/rpl/Makefile.rpl

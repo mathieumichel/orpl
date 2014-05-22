@@ -47,7 +47,6 @@ struct app_data {
   uint8_t ping;
   uint8_t fpcount;
   uint16_t dc_metric;
-  uint8_t hopcount;//MF
 };
 
 /* Copy an appdata to another with no assumption that the addresses are aligned */
@@ -60,6 +59,11 @@ struct app_data *appdataptr_from_packetbuf();
 void log_appdataptr(struct app_data *dataptr);
 /* Return node id from its rime address */
 uint16_t log_node_id_from_rimeaddr(const void *rimeaddr);
+/* Return node id from its IP address */
+uint16_t log_node_id_from_ipaddr(const void *ipaddr);
+/* Prints out the content of the active routing set */
+void orpl_log_print_routing_set();
+
 
 #define ORPL_LOG(...) printf(__VA_ARGS__)
 #define ORPL_LOG_FROM_APPDATAPTR(appdataptr, ...) { printf(__VA_ARGS__); log_appdataptr(appdataptr); }
@@ -68,7 +72,9 @@ uint16_t log_node_id_from_rimeaddr(const void *rimeaddr);
 #define ORPL_LOG_FROM_PACKETBUF(...) ORPL_LOG_FROM_APPDATAPTR(appdataptr_from_packetbuf(), __VA_ARGS__)
 #define ORPL_LOG_IPADDR(addr) uip_debug_ipaddr_print(addr)
 #define ORPL_LOG_LLADDR(addr) uip_debug_lladdr_print(addr)
+#define ORPL_LOG_INC_HOPCOUNT_FROM_PACKETBUF() { appdataptr_from_packetbuf()->hop++; }
+#define ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF() { appdataptr_from_packetbuf()->fpcount++; }
 
 #define ORPL_LOG_NODEID_FROM_RIMEADDR log_node_id_from_rimeaddr
-
+#define ORPL_LOG_NODEID_FROM_IPADDR log_node_id_from_ipaddr
 #endif /* ORPL_LOG */

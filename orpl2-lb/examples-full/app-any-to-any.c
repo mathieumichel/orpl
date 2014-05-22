@@ -48,17 +48,15 @@
 #include "simple-udp.h"
 #include "cc2420.h"
 #include <stdio.h>
-#define UIP_IP_BUF   ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])//added by macfly to use ttl from ipv6 header as hopcount
 #define SEND_INTERVAL   (2 * 60 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
-static char buf[APP_PAYLOAD_LEN];
 static struct simple_udp_connection unicast_connection;
 static uint16_t current_cnt = 0;
 
 static const uint16_t any_to_any_list[] = {
 #if IN_INDRIYA
-    1, 22, 50, 56, 72, 126, 124, 118,
+    1, 14, 22, 50, 56, 72, 126, 124, 118,
     //1, 22, 50, 56, 72, 121, 124, 118,
     //1, 14, 22, 50, 56, 72, 112, 124
    // 1, 22, 50, 56, 72, 121, 124, 118,
@@ -83,7 +81,7 @@ is_id_in_any_to_any(uint16_t id)
 }
 
 /*---------------------------------------------------------------------------*/
-PROCESS(unicast_sender_process, "ORPL -- Collect-only Application");
+PROCESS(unicast_sender_process, "ORPL -- Any-to-Any Application");
 AUTOSTART_PROCESSES(&unicast_sender_process);
 /*---------------------------------------------------------------------------*/
 void app_send_to(uint16_t id, int ping, uint32_t seqno);
@@ -98,7 +96,6 @@ receiver(struct simple_udp_connection *c,
 {
   struct app_data data;
   appdata_copy(&data, (struct app_data*)dataptr);
-  ((struct app_data *)dataptr)->hopcount=uip_ds6_if.cur_hop_limit - UIP_IP_BUF->ttl + 1;//added by macfly to use ttl from ipv6 header as hopcount
   if(data.ping) {
     ORPL_LOG_FROM_APPDATAPTR((struct app_data *)dataptr, "App: received ping");
   } else {
@@ -121,7 +118,7 @@ app_send_to(uint16_t id, int ping, uint32_t seqno)
   data.hop = 0;
   data.fpcount = 0;
   data.ping = ping;
-  data.hopcount=0;//added by macfly to use ttl from ipv6 header as hopcount
+
   if(ping) {
     ORPL_LOG_FROM_APPDATAPTR(&data, "App: sending ping");
   } else {
@@ -131,8 +128,7 @@ app_send_to(uint16_t id, int ping, uint32_t seqno)
   orpl_set_curr_seqno(data.seqno);
   set_ipaddr_from_id(&dest_ipaddr, id);
 
-  *((struct app_data*)buf) = data;
-  simple_udp_sendto(&unicast_connection, buf, sizeof(buf) + 1, &dest_ipaddr);
+  simple_udp_sendto(&unicast_connection, &data, sizeof(data), &dest_ipaddr);
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(unicast_sender_process, ev, data)
@@ -145,8 +141,9 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
-    uint16_t mymac = rimeaddr_node_addr.u8[7] << 8 | rimeaddr_node_addr.u8[6];
-    //printf("Node id unset, my mac is 0x%04x\n", mymac);
+//    printf("Node id unset, my mac is ");
+//    uip_debug_lladdr_print(&rimeaddr_node_addr);
+//    printf("\n");
     PROCESS_EXIT();
   }
 
@@ -170,22 +167,14 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
 
-    static uint16_t index;
-    index = random_rand();
+    uint8_t target_id;
 
     while(1) {
       etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
 
-//      static uint16_t target_id;
-//      do {
-//        get_node_id_from_index(target_id++);
-//        target_id %= get_n_nodes();
-//      } while (target_id == node_id || !is_id_in_any_to_any(target_id));
-      uint16_t target_id;
       do {
-        target_id=get_node_id_from_index(index++);
-        index %= get_n_nodes();
+        target_id = get_node_id_from_index((random_rand()>>8)%get_n_nodes());
       } while (target_id == node_id || !is_id_in_any_to_any(target_id));
       //ORPL_LOG("plop %u-%u\n",target_id,get_n_nodes());
       if(target_id < node_id || target_id == ROOT_ID) {

@@ -656,7 +656,7 @@ tcpip_ipv6_output(void)
         anycast_addr = &anycast_addr_up;
       } else { /* We are the root and need to route upwards =>
       use fallback interface. */
-        ORPL_LOG_FROM_UIP("Tcpip: fw ko");
+       // ORPL_LOG_FROM_UIP("Tcpip: fw ko");
 #ifdef UIP_FALLBACK_INTERFACE
     	  PRINTF("FALLBACK: removing ext hdrs & setting proto %d %d\n",
     			  uip_ext_len, *((uint8_t *)UIP_IP_BUF + 40));

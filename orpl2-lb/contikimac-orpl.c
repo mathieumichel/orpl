@@ -52,8 +52,6 @@
 #include "sys/rtimer.h"
 #include "orpl.h"
 #include "orpl-anycast.h"
-#include "deployment.h"
-#include "orpl-log.h"
 
 #include <string.h>
 
@@ -67,15 +65,20 @@
 #endif
 
 #if WITH_ORPL_LB
+#include "deployment.h"
+#include "orpl-log.h"
 #define LB_DATAPERIOD 1*60*CLOCK_SECOND // period between two checks (used with ctimer)
-#define LB_GUARD_TIME 8 //guard timer before starting load balancing (used with stimer)
+#define LB_GUARD_TIME 60 //guard timer before starting load balancing (used with stimer)
 #define CYCLE_MAX  (2000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.50
 #define CYCLE_STEP_MAX (CYCLE_TIME/2)///2) //we don't want to move too fast
 #define DC_ALPHA 0.25 //prev 0.10 (changed 07/02)
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define OSCILLATION 0
+#define WITH_NO_OSCILLATION 0
+#if WITH_NO_OSCILLATION
+static uint32_t delta_tx_bis, delta_rx_bis, delta_time_bis;
+#endif /* WITH_NO_OSCILLATION */
 //#define HYSTERESIS DUTY_CYCLE_TARGET*5/100
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
@@ -86,9 +89,8 @@ static struct ctimer ct;//timer used to manage the cycle
 static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
-static uint32_t delta_tx_bis, delta_rx_bis, delta_time_bis;
 uint16_t periodic_dc, objective_dc, weighted_dc;
-uint16_t periodic_tx_dc=0;
+//uint16_t periodic_tx_dc=0;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
 
@@ -98,7 +100,6 @@ int loadbalancing_is_on=0;//MF
 uint32_t packet_seen_count=0;  //MF-sfd
 uint32_t sfd_decoded_count=0;  //MF-sfd
 #endif
-uint16_t interP=1250;
 #if WITH_ORPL
 
 /* We add a jitter in the ContikiMAC wakeups to avoid having the same collisions repeatedly */
@@ -261,7 +262,7 @@ static int we_are_receiving_burst = 0;
 #ifdef CONTIKIMAC_CONF_INTER_PACKET_INTERVAL
 #define INTER_PACKET_INTERVAL              CONTIKIMAC_CONF_INTER_PACKET_INTERVAL
 #else
-#define INTER_PACKET_INTERVAL              RTIMER_ARCH_SECOND / interP//2500
+#define INTER_PACKET_INTERVAL              RTIMER_ARCH_SECOND / 2500
 #endif
 
 /* AFTER_ACK_DETECTECT_WAIT_TIME is the time to wait after a potential
@@ -288,7 +289,7 @@ static int we_are_receiving_burst = 0;
 #ifdef CONTIKIMAC_CONF_SHORTEST_PACKET_SIZE
 #define SHORTEST_PACKET_SIZE  CONTIKIMAC_CONF_SHORTEST_PACKET_SIZE
 #else
-#define SHORTEST_PACKET_SIZE               43
+#define SHORTEST_PACKET_SIZE               125
 #endif
 
 
@@ -505,6 +506,7 @@ powercycle(struct rtimer *t, void *ptr)
       schedule_powercycle_fixed(t, RTIMER_NOW() + CCA_SLEEP_TIME);
       PT_YIELD(&pt);
     }
+    
     if(packet_seen) {
       static rtimer_clock_t start;
       static uint8_t silence_periods, periods;
@@ -608,11 +610,11 @@ powercycle(struct rtimer *t, void *ptr)
 
   PT_END(&pt);
 }
-
 /*---------------------------------------------------------------------------*/
 #if WITH_ORPL_LB
 static void setLoadBalancing(int mode){
   loadbalancing_is_on=mode;
+  ORPL_LOG("LB on\n");
 #if CHANGE_STROBE_TIME
   if(loadbalancing_is_on){
       default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
@@ -638,29 +640,25 @@ static void managecycle(void *ptr){
     last_rx = curr_rx;
     last_time = curr_time;
 
-#if OSCILLATION
-    delta_tx_bis = delta_tx;
-    delta_rx_bis = delta_rx;
-    delta_time_bis = delta_time;
-#else
+    uint8_t go=1;//we check only each 4 minutes when WITH_NO_OSCILLATION
+#if WITH_NO_OSCILLATION
     delta_tx_bis = delta_tx_bis + delta_tx;
     delta_rx_bis = delta_rx_bis + delta_rx;
     delta_time_bis = delta_time_bis + delta_time;
-#endif
-    if(cpt==0){
-      // !!!! for target 50=0.50, 110= 1.10,...
-      //ORPL_LOG("ORPL_LB : target=%u, max=%lu ms, step=%lu ms, guard=%u check, strobeTime=%u, alpha=%u %\n",(uint16_t)(DUTY_CYCLE_TARGET*100ul),CYCLE_MAX* 1000/RTIMER_ARCH_SECOND,CYCLE_STEP_MAX*1000/RTIMER_ARCH_SECOND,LB_GUARD_TIME,CHANGE_STROBE_TIME, (uint16_t)(DC_ALPHA*100ul));
-      //ORPL_LOG("ORPL_LB : step=%lu ms, alpha=%u %\n",CYCLE_STEP_MAX*1000/RTIMER_ARCH_SECOND, (uint16_t)(DC_ALPHA*100ul));
+    if((cpt+1)%4!=0){
+      go=0;
     }
+#endif /* WITH_NO_OSCILLATION */
 
-#if OSCILLATION
-    if(loadbalancing_is_on && (cpt+1)>=8){
-#else
-      if(loadbalancing_is_on && (cpt+1)>=8 && (cpt+1)%4==0){//cpt+1 because we wait 1 minute before entering the stuff
-#endif
+    if(loadbalancing_is_on && (cpt+1)>=LB_GUARD_TIME && go ){//cpt+1 because we wait 1 minute before entering the stuff
 
+#if WITH_NO_OSCILLATION
       periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
-      periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
+      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
+#else /* WITH_NO_OSCILLATION */
+      periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
+      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
+#endif /* WITH_NO_OSCILLATION */
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
@@ -679,32 +677,20 @@ static void managecycle(void *ptr){
 
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
 
-//      uint32_t temp1=periodic_dc/100ul;
-//      uint32_t temp2=(periodic_dc%100ul)/10ul;
-//      uint32_t temp3=periodic_dc%10ul;
-//      printf("ORPL_LB: %lu.%lu%lu",temp1,temp2,temp3);
-//      temp1=weighted_dc/100ul;
-//      temp2=(weighted_dc%100ul)/10ul;
-//      temp3=(weighted_dc%10ul);
-//      printf(" - %lu.%lu%lu",temp1,temp2,temp3);
       printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
 
-//#if CHANGE_STROBE_TIME
-//      default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
-//#endif
-      if(weighted_dc > objective_dc + 5 || weighted_dc < objective_dc - 5){
-      //if((weighted_dc > objective_dc + 2 && periodic_dc > objective_dc + 2) || (weighted_dc < objective_dc - 2 && periodic_dc < objective_dc -2)){
+
+      if(weighted_dc > objective_dc + 2 || weighted_dc < objective_dc - 2){
+
         uint32_t temp_cycle;
         uint16_t weight=0;//the weight must be defined based on the current duty-cycle
         uint32_t cycle_diff;
-        if(periodic_dc  > objective_dc){
-          weight = ((uint16_t)((periodic_dc-objective_dc)*100/objective_dc));///2 + ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc))/2 ;
+        if(weighted_dc  > objective_dc){
+          weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
         }
-        else if(periodic_dc  < objective_dc){
-          weight = ((uint16_t)((objective_dc-periodic_dc)*100/objective_dc));///2 + ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc))/2 ;
+        else if(weighted_dc  < objective_dc){
+          weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
         }
-        //printf(" - w=%lu.%lu%lu",weight/100ul, (weight%100ul)/10ul, weight%10ul);
-        //printf (" - %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
         if(weight > 100){
           weight=100;
         }
@@ -723,15 +709,9 @@ static void managecycle(void *ptr){
         }
         cycle_time=temp_cycle;
       }
-     printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+      printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
-#if !OSCILLATION
-    if((cpt+1)%4 == 0){//here cause if not we never go through this one without LB
-      delta_tx_bis=0;
-      delta_rx_bis=0;
-      delta_time_bis=0;
-    }
-#endif
+
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
                   cpt++,
@@ -890,7 +870,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   NETSTACK_ENCRYPT();
 #endif /* NETSTACK_ENCRYPT */
 
+#if !WITH_CONTIKIMAC_HEADER
   transmit_len = packetbuf_totlen();
+#endif /* !WITH_CONTIKIMAC_HEADER */
 
   NETSTACK_RADIO.prepare(packetbuf_hdrptr(), transmit_len);
 
@@ -994,7 +976,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 #endif
 
   uint8_t ackbuf[ACK_LEN];
-  rimeaddr_t *dest = NULL;
+  rimeaddr_t dest;
 
   watchdog_periodic();
   t0 = RTIMER_NOW();
@@ -1009,12 +991,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 
   }
 #endif
-  if(is_broadcast){
-    interP=2500;
-  }
-  else{
-    interP=1250;
-  }
+
   /* In the broadcast case, we keep sending even after getting an ack */
   for(strobes = 0, collisions = 0;
       (is_broadcast || collisions == 0) &&
@@ -1068,18 +1045,20 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
           if(is_broadcast) {
             got_strobe_ack++;
             encounter_time = previous_txtime;
-            dest = (rimeaddr_t *)(ackbuf+3);
+            memcpy(&dest, ackbuf+3, 8);
             uint16_t neighbor_rank = (ackbuf[3+8+1]<<8) + ackbuf[3+8];
-            rpl_set_parent_rank((uip_lladdr_t *)dest, neighbor_rank);
-            orpl_broadcast_acked(dest);
+            rpl_set_parent_rank((uip_lladdr_t *)&dest, neighbor_rank);
+            orpl_broadcast_acked(&dest);
           } else {
           /* Received ack for anycast, stop strobing */
             got_strobe_ack++;
             encounter_time = previous_txtime;
-            dest = (rimeaddr_t *)(ackbuf+3);
+            memcpy(&dest, ackbuf+3, 8);
             uint16_t neighbor_rank = (ackbuf[3+8+1]<<8) + ackbuf[3+8];
-            rpl_set_parent_rank((uip_lladdr_t *)dest, neighbor_rank);
-            if(got_strobe_ack >= 1) break;
+            rpl_set_parent_rank((uip_lladdr_t *)&dest, neighbor_rank);
+            if(got_strobe_ack >= 1) {
+              break;
+            }
           }
         }
       }
@@ -1157,13 +1136,13 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   if(!is_broadcast) {
 	  if(got_strobe_ack) {
 		  ORPL_LOG_FROM_PACKETBUF("Cmac: acked by %u s %u c %d seq %u",
-				  				  ORPL_LOG_NODEID_FROM_RIMEADDR(dest),
+				  				  ORPL_LOG_NODEID_FROM_RIMEADDR(&dest),
 				  				  strobe_duration,
 				  				  collision_count, seqno);
 		  /* Set link-layer address of the node that acked the packet */
-		  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, dest);
+		  packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &dest);
 		  if(packetbuf_attr(PACKETBUF_ATTR_ORPL_DIRECTION) == direction_down) {
-			  orpl_acked_down_insert(orpl_packetbuf_seqno(), dest);
+			  orpl_acked_down_insert(orpl_packetbuf_seqno(), &dest);
 		  }
 	  } else {
 		  ORPL_LOG_FROM_PACKETBUF("Cmac:! noack s %u c %d seq %u", strobe_duration, collisions, seqno);
@@ -1257,7 +1236,7 @@ input_packet(void)
   }
 
   if(packetbuf_datalen() > 0) {
-    struct anycast_parsing_info ret = orpl_anycast_parse_802154_frame(packetbuf_dataptr(), packetbuf_datalen(), 1);
+    struct anycast_parsing_info ret = orpl_anycast_802154_frame_parse(packetbuf_dataptr(), packetbuf_datalen());
 
     packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, ret.direction);
 
@@ -1296,7 +1275,6 @@ input_packet(void)
         rpl_set_parent_rank((uip_lladdr_t *)packetbuf_addr(PACKETBUF_ADDR_SENDER), packetbuf_attr(PACKETBUF_ATTR_EDC));
         prev_seqno = packetbuf_attr(PACKETBUF_ATTR_PACKET_ID);
       }
-
     }
 
     if(packetbuf_datalen() > 0 &&
@@ -1327,7 +1305,6 @@ input_packet(void)
       if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER), /* duplicate detection for broadcast only */
                                     &rimeaddr_null))
       {
-        //ORPL_LOG("bcast from %d\n",ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER)));
         int i;
         for(i = 0; i < MAX_SEQNOS_LL; ++i) {
           if(packetbuf_attr(PACKETBUF_ATTR_PACKET_ID) == received_seqnos[i].seqno &&
@@ -1385,11 +1362,13 @@ input_packet(void)
           }
           received_app_seqnos[0].seqno = seqno;
         }
-
+        
+        ORPL_LOG_INC_HOPCOUNT_FROM_PACKETBUF();
         ORPL_LOG_FROM_PACKETBUF("Cmac: input from %d",
             ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER))
         );
       }
+      
       NETSTACK_MAC.input();
       return;
     } else {
@@ -1425,7 +1404,7 @@ init(void)
 
 #if WITH_PHASE_OPTIMIZATION
   phase_init();
-#endif /*WITH_PHASE_OPTIMIZATION*/
+#endif /* WITH_PHASE_OPTIMIZATION */
 
 }
 /*---------------------------------------------------------------------------*/

@@ -38,7 +38,7 @@
  * \author  Julien Abeille <jabeille@cisco.com> (IPv6 related code)
  */
 
-#include "contiki-net.h"
+#include "contiki-net.h"<
 #include "anycast.h"
 #include "net/uip-split.h"
 #include "net/uip-packetqueue.h"

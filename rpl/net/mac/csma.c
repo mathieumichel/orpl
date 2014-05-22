@@ -275,7 +275,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
       queuebuf_update_attr_from_packetbuf(q->buf);
     } else {
       printf("Csma:! dropping %u after %d tx, %d collisions", node_id_from_rimeaddr(&n->addr) , n->transmissions, n->collisions);
-      ORPL_LOG(appdataptr_from_packetbuf());
+      rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
       PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
              status, n->transmissions, n->collisions);
       free_first_packet(n);
@@ -284,11 +284,11 @@ packet_sent(void *ptr, int status, int num_transmissions)
   } else {
     if(status == MAC_TX_OK) {
       printf("Csma: success %u after %d tx, %d collisions", node_id_from_rimeaddr(packetbuf_addr(PACKETBUF_ADDR_RECEIVER)), n->transmissions, n->collisions);
-      ORPL_LOG(appdataptr_from_packetbuf());
+      rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
       PRINTF("csma: rexmit ok %d\n", n->transmissions);
     } else {
       printf("Csma:! rexmit failed");
-      ORPL_LOG(appdataptr_from_packetbuf());
+      rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
       PRINTF("csma: rexmit failed %d: %d\n", n->transmissions, status);
     }
     free_first_packet(n);
@@ -382,12 +382,12 @@ send_packet(mac_callback_t sent, void *ptr)
         memb_free(&neighbor_memb, n);
       }
       printf("Csma:! couldn't allocate packet");
-      ORPL_LOG(appdataptr_from_packetbuf());
+      rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
       PRINTF("csma: could not allocate packet, dropping packet\n");
       mac_call_sent_callback(sent, ptr, MAC_TX_NOACK, 1);
     } else {
       printf("Csma:! couldn't allocate neighbor");
-      ORPL_LOG(appdataptr_from_packetbuf());
+      rpl_trace(rpl_dataptr_from_packetbuf());//ORPL_LOG(appdataptr_from_packetbuf());
       PRINTF("csma: could not allocate neighbor, dropping packet\n");
       mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
     }

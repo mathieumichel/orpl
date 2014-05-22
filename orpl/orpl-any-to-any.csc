@@ -143,8 +143,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>270.01025560985187</x>
-        <y>20.74246158499915</y>
+        <x>366.88978599962746</x>
+        <y>92.03454634116794</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -171,8 +171,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>343.5891727463848</x>
-        <y>-50.570759362058915</y>
+        <x>405.5392159196886</x>
+        <y>-89.68558030052307</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -181,11 +181,67 @@
       </interface_config>
       <motetype_identifier>sky1</motetype_identifier>
     </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>341.8015595602895</x>
+        <y>-56.46063177275121</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>11</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>6.408340748403218</x>
+        <y>25.533683628567715</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>12</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>271.28330146052883</x>
+        <y>36.43361207020278</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>13</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>397.4024938312547</x>
+        <y>-6.284178894075333</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>14</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
   </simulation>
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>264</width>
-    <z>2</z>
+    <z>0</z>
     <height>203</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -197,22 +253,22 @@
       <skin>se.sics.cooja.plugins.skins.AttributeVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>0.8641611968910323 0.0 0.0 0.8641611968910323 -99.91643075931556 129.7012879380052</viewport>
+      <viewport>1.4747953622574368 0.0 0.0 1.4747953622574368 -86.087354851874 166.26787788857837</viewport>
     </plugin_config>
-    <width>238</width>
-    <z>4</z>
-    <height>310</height>
+    <width>559</width>
+    <z>3</z>
+    <height>394</height>
     <location_x>6</location_x>
     <location_y>204</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter>ID:3</filter>
+      <filter>Csma:!</filter>
       <formatted_time />
       <coloring />
     </plugin_config>
-    <width>675</width>
+    <width>722</width>
     <z>1</z>
     <height>479</height>
     <location_x>260</location_x>
@@ -231,13 +287,17 @@
       <mote>7</mote>
       <mote>8</mote>
       <mote>9</mote>
+      <mote>10</mote>
+      <mote>11</mote>
+      <mote>12</mote>
+      <mote>13</mote>
       <showRadioRXTX />
       <showRadioHW />
       <split>-1</split>
-      <zoomfactor>200.0</zoomfactor>
+      <zoomfactor>1000.0</zoomfactor>
     </plugin_config>
     <width>1297</width>
-    <z>3</z>
+    <z>4</z>
     <height>208</height>
     <location_x>77</location_x>
     <location_y>437</location_y>
@@ -264,7 +324,7 @@
  *  Mote mote, int id, String msg&#xD;
  */&#xD;
 &#xD;
-TIMEOUT(350000);&#xD;
+TIMEOUT(3600000);&#xD;
 &#xD;
 while (true) {&#xD;
   log.log(time + ":" + id + ":" + msg + "\n");&#xD;
@@ -273,7 +333,7 @@ while (true) {&#xD;
       <active>true</active>
     </plugin_config>
     <width>600</width>
-    <z>0</z>
+    <z>2</z>
     <height>700</height>
     <location_x>150</location_x>
     <location_y>150</location_y>

@@ -105,56 +105,18 @@ rpl_get_parent_rank(uip_lladdr_t *addr)
 }
 #if WITH_ORPL
 /*---------------------------------------------------------------------------*/
-rpl_rank_t
-rpl_get_parent_rank_default(uip_lladdr_t *addr, rpl_rank_t default_value)
+rpl_parent_t *
+rpl_get_parent(const uip_lladdr_t *addr)
 {
-  rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
-  if(p != NULL) {
-    return p->rank;
-  } else {
-    return default_value;
-  }
+  return nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
 }
 /*---------------------------------------------------------------------------*/
 void
-rpl_set_parent_rank(uip_lladdr_t *addr, rpl_rank_t rank)
+rpl_set_parent_rank(const uip_lladdr_t *addr, rpl_rank_t rank)
 {
   rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
   if(p != NULL) {
     p->rank = rank;
-  }
-}
-/*---------------------------------------------------------------------------*/
-void
-rpl_incr_parent_bc_ackcount(uip_lladdr_t *addr){
-  rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
-    if(p != NULL) {
-      if(p->bc_ackcount > orpl_broadcast_count+1){
-        p->bc_ackcount = orpl_broadcast_count+1;
-      }
-      else{
-        p->bc_ackcount = p->bc_ackcount+1;
-      }
-    }
-}
-
-uint16_t
-rpl_get_parent_bc_ackcount_default(uip_lladdr_t *addr, uint16_t default_value)
-{
-  rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
-  if(p != NULL) {
-    return p->bc_ackcount;
-  } else {
-    return default_value;
-  }
-}
-/*---------------------------------------------------------------------------*/
-void
-rpl_set_parent_bc_ackcount(uip_lladdr_t *addr, uint16_t bc_ackcount)
-{
-  rpl_parent_t *p = nbr_table_get_from_lladdr(rpl_parents, (rimeaddr_t *)addr);
-  if(p != NULL) {
-    p->bc_ackcount = bc_ackcount;
   }
 }
 #endif /* WITH_ORPL */
@@ -1258,32 +1220,6 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     }
   }
 
-  if(dio->rank == INFINITE_RANK) {
-    PRINTF("RPL: Ignoring DIO from node with infinite rank: ");
-    PRINT6ADDR(from);
-    PRINTF("\n");
-
-    //to be sure to add the parent in the parents list
-    p = rpl_find_parent(dag, from);
-    if(p == NULL) {
-      previous_dag = find_parent_dag(instance, from);
-      if(previous_dag == NULL) {
-        /* Add the DIO sender as a candidate parent. */
-        p = rpl_add_parent(dag, dio, from);
-        if(p == NULL) {
-          PRINTF("RPL: Failed to add a new parent (");
-          PRINT6ADDR(from);
-          PRINTF(")\n");
-          return;
-        }
-        PRINTF("RPL: New candidate parent with rank %u: ", (unsigned)p->rank);
-        PRINT6ADDR(from);
-        PRINTF("\n");
-      }
-    }
-    return;
-  }//MF ORPL
-
   if(instance == NULL) {
     PRINTF("RPL: New instance detected: Joining...\n");
     rpl_join_instance(from, dio);
@@ -1302,8 +1238,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
            (unsigned)dio->rank);
     return;
   } else if(dio->rank == INFINITE_RANK && dag->joined) {
-    printf("infinite\n");
-    //rpl_reset_dio_timer(instance); //MF
+    rpl_reset_dio_timer(instance);
   }
   
   /* Prefix Information Option treated to add new prefix */

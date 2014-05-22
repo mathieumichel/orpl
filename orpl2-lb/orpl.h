@@ -42,14 +42,12 @@
 
 #include "net/rpl/rpl.h"
 
-static int orpl_up_only;//to change the data interval in contikimac
 #if WITH_ORPL_LB
 #if WITH_ORPL_LB_DIO_TARGET
 uint8_t dio_dc_objective;//DC objective carried by DIO
 uint8_t dio_dc_obj_sn;
 #endif
 #endif /*WITH_ORPL_LB*/
-
 
 #ifdef ORPL_CONF_EDC_W
 #define ORPL_EDC_W ORPL_CONF_EDC_W
@@ -73,6 +71,9 @@ uint8_t dio_dc_obj_sn;
 #define ORPL_LOG_IPADDR(addr) PRINT6ADDR(addr)
 #define ORPL_LOG_LLADDR(addr) PRINTLLADDR(addr)
 #define ORPL_LOG_NODEID_FROM_RIMEADDR(addr) ((addr).u8[RIMEADDR_SIZE-1])
+#define ORPL_LOG_NODEID_FROM_IPADDR(addr) ((addr).u8[15])
+#define ORPL_LOG_INC_HOPCOUNT_FROM_PACKETBUF()
+#define ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF()
 #endif /* ORPL_LOG */
 
 /* Fixed point divisor */
@@ -91,8 +92,6 @@ extern int sending_routing_set;
 /* Total number of broadcast sent */
 extern uint32_t orpl_broadcast_count;
 
-
-
 /* Set the 32-bit ORPL sequence number in packetbuf */
 void orpl_packetbuf_set_seqno(uint32_t seqno);
 /* Get the 32-bit ORPL sequence number from packetbuf */
@@ -101,6 +100,8 @@ uint32_t orpl_packetbuf_seqno();
 void orpl_set_curr_seqno(uint32_t seqno);
 /* Get the current ORPL sequence number */
 uint32_t orpl_get_curr_seqno();
+/* Build a global link-layer address from an IPv6 based on its UUID64 */
+void lladdr_from_ipaddr_uuid(uip_lladdr_t *lladdr, const uip_ipaddr_t *ipaddr);
 /* Returns 1 if EDC is frozen, i.e. we are not allowed to change edc */
 int orpl_is_edc_frozen();
 /* Returns 1 routing sets are active, i.e. we can start inserting and merging */
@@ -111,8 +112,6 @@ int orpl_is_root();
 rpl_rank_t orpl_current_edc();
 /* Returns 1 if addr is the global ip of a reachable neighbor */
 int orpl_is_reachable_neighbor(const uip_ipaddr_t *ipaddr);
-/* Returns 1 if addr is the global ip of a reachable child */
-int orpl_is_reachable_child(const uip_ipaddr_t *ipaddr);
 /* Insert a packet sequence number to the blacklist
  * (used for false positive recovery) */
 void orpl_blacklist_insert(uint32_t seqno);
@@ -137,5 +136,7 @@ void orpl_broadcast_done();
 void orpl_update_edc(rpl_rank_t edc);
 /* ORPL initialization */
 void orpl_init(const uip_ipaddr_t *ipaddr, int is_root, int up_only);
+/* Function that computes the metric EDC */
+rpl_rank_t orpl_calculate_edc(int verbose);
 
 #endif /* __ORPL_H__ */
