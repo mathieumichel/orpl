@@ -23,7 +23,7 @@
 #error UP_ONLY is not set
 #endif
 
-#define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 5 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
 static char buf[APP_PAYLOAD_LEN];

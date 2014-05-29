@@ -67,24 +67,22 @@
 #if WITH_ORPL_LB
 #include "deployment.h"
 #include "orpl-log.h"
-#define LB_DATAPERIOD 1*60*CLOCK_SECOND // period between two checks (used with ctimer)
-#define LB_GUARD_TIME 60 //guard timer before starting load balancing (used with stimer)
+#define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
+#define LB_GUARD_TIME 60 //guard timer before starting load balancing
 #define CYCLE_MAX  (2000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.50
-#define CYCLE_STEP_MAX (CYCLE_TIME/2)///2) //we don't want to move too fast
-#define DC_ALPHA 0.25 //prev 0.10 (changed 07/02)
+#define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
+#define DC_ALPHA 0.50
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define WITH_NO_OSCILLATION 0
-#if WITH_NO_OSCILLATION
-static uint32_t delta_tx_bis, delta_rx_bis, delta_time_bis;
-#endif /* WITH_NO_OSCILLATION */
-//#define HYSTERESIS DUTY_CYCLE_TARGET*5/100
+#define HYSTERESIS 5 // 0.05
+
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
 #endif /*CONTIKIMAC_CONF_CYCLE_TIME*/
+
 static struct ctimer ct;//timer used to manage the cycle
 static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
@@ -93,8 +91,8 @@ uint16_t periodic_dc, objective_dc, weighted_dc;
 //uint16_t periodic_tx_dc=0;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
-
 #endif /*WITH_ORPL_LB*/
+
 #define WITH_SFD_COMPUTATION 0
 #if WITH_SFD_COMPUTATION
 uint32_t packet_seen_count=0;  //MF-sfd
@@ -640,25 +638,9 @@ static void managecycle(void *ptr){
     last_rx = curr_rx;
     last_time = curr_time;
 
-    uint8_t go=1;//we check only each 4 minutes when WITH_NO_OSCILLATION
-#if WITH_NO_OSCILLATION
-    delta_tx_bis = delta_tx_bis + delta_tx;
-    delta_rx_bis = delta_rx_bis + delta_rx;
-    delta_time_bis = delta_time_bis + delta_time;
-    if((cpt+1)%4!=0){
-      go=0;
-    }
-#endif /* WITH_NO_OSCILLATION */
-
-    if(loadbalancing_is_on && (cpt+1)>=LB_GUARD_TIME && go ){//cpt+1 because we wait 1 minute before entering the stuff
-
-#if WITH_NO_OSCILLATION
-      periodic_dc = (uint16_t)((10ul * (delta_tx_bis+delta_rx_bis))/(delta_time_bis/1000ul));
-      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx_bis))/(delta_time_bis/1000ul));
-#else /* WITH_NO_OSCILLATION */
+    if(loadbalancing_is_on){//cpt+1 because we wait 1 minute before entering the stuff
       periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
       //periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
-#endif /* WITH_NO_OSCILLATION */
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
@@ -667,49 +649,50 @@ static void managecycle(void *ptr){
       else{
         objective_dc=dio_dc_objective;
       }
-#else
+#else /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
       objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
-#endif
+#endif /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
+
+
       if(weighted_dc==0){
         weighted_dc=objective_dc;
       }
 
-
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
+      if((cpt+1)>=LB_GUARD_TIME/4){//cpt+1 because we wait 1 minute before entering the stuff
+        printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
 
-      printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
-
-
-      if(weighted_dc > objective_dc + 2 || weighted_dc < objective_dc - 2){
-
-        uint32_t temp_cycle;
-        uint16_t weight=0;//the weight must be defined based on the current duty-cycle
-        uint32_t cycle_diff;
-        if(weighted_dc  > objective_dc){
-          weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
-        }
-        else if(weighted_dc  < objective_dc){
-          weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
-        }
-        if(weight > 100){
-          weight=100;
-        }
-        cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
-        if(periodic_dc  > objective_dc){
-          temp_cycle = cycle_time+cycle_diff;
-          if(temp_cycle > CYCLE_MAX){
-            temp_cycle=CYCLE_MAX;
+        if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+          uint32_t temp_cycle;
+          uint16_t weight=0;//the weight must be defined based on the current duty-cycle
+          uint32_t cycle_diff;
+          if(weighted_dc  > objective_dc){
+            weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
           }
-        }
-        else{
-          temp_cycle = cycle_time-cycle_diff;
-          if(temp_cycle < CYCLE_MIN){
-            temp_cycle=CYCLE_MIN;
+          else if(weighted_dc  < objective_dc){
+            weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
           }
+
+          if(weight > 100){
+            weight=100;
+          }
+          cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
+          if(weighted_dc > objective_dc){
+            temp_cycle = cycle_time+cycle_diff;
+            if(temp_cycle > CYCLE_MAX){
+              temp_cycle=CYCLE_MAX;
+            }
+          }
+          else{
+            temp_cycle = cycle_time-cycle_diff;
+            if(temp_cycle < CYCLE_MIN){
+              temp_cycle=CYCLE_MIN;
+            }
+          }
+          cycle_time=temp_cycle;
         }
-        cycle_time=temp_cycle;
+        printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
       }
-      printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
 
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
@@ -718,7 +701,6 @@ static void managecycle(void *ptr){
                   delta_tx, delta_rx, delta_time,
                   (unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND)
     );
-
 
 
     //ANNOTATE("#A int=%lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
