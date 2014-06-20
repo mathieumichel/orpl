@@ -259,7 +259,6 @@ orpl_anycast_802154_frame_must_ack(uint8_t *data, uint8_t len)
       src_addr_host_order[i] = src_addr[7-i];
       dest_addr_host_order[i] = dest_addr[7-i];
     }
-
     /* Parse the destination address */
     if(anycast_parse_addr((rimeaddr_t*)dest_addr, &info.direction, &info.neighbor_edc, &info.seqno)) {
       rpl_rank_t curr_edc = orpl_current_edc();

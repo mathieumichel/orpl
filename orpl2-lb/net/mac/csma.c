@@ -283,16 +283,16 @@ packet_sent(void *ptr, int status, int num_transmissions)
         	if(ORPL_WITH_FP_RECOVERY && !orpl_is_root() && packetbuf_attr(PACKETBUF_ATTR_ORPL_DIRECTION) == direction_down) {
 //        		ORPL_LOG_FROM_PACKETBUF("Csma:! triggering false positive recovery %u after %d tx, %d c.",
   //      		    ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
-        		free_packet(n, q);
-        		/* GIve another try, upwards this time, after inserting in blacklist. */
-        		orpl_blacklist_insert(orpl_packetbuf_seqno());
-        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
-        		ORPL_LOG_FROM_PACKETBUF("Tcpip: false positive recovery");
-        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
-        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
-        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
-        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
-        		NETSTACK_MAC.send(sent, cptr);
+//        		free_packet(n, q);
+//        		/* GIve another try, upwards this time, after inserting in blacklist. */
+//        		orpl_blacklist_insert(orpl_packetbuf_seqno());
+//        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
+//        		ORPL_LOG_FROM_PACKETBUF("Tcpip: false positive recovery");
+//        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
+//        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
+//        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
+//        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
+//        		NETSTACK_MAC.send(sent, cptr);
         	} else {
         	  ORPL_LOG_FROM_PACKETBUF("Csma:! dropping %u after %d tx, %d collisions",
         	      ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);

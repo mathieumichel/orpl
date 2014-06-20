@@ -110,7 +110,7 @@ add_to_forwarder_set(rpl_parent_t *curr_p, rpl_rank_t curr_p_rank, uint16_t ackc
 //        B,
 //        ackcount,
 //        total_tx_count
-//    );
+//   );
 //  }
 
   /* Finally add W to EDC (cost of forwarding) */
@@ -153,9 +153,9 @@ orpl_calculate_edc(int verbose)
   forwarder_set_size = 0;
   neighbor_set_size = 0;
 
-  if(verbose) {
-    printf("ORPL: starting EDC calculation. hbh_edc: %u, e2e_edc %u\n", hbh_edc, orpl_current_edc());
-  }
+//  if(verbose) {
+//    printf("ORPL: starting EDC calculation. hbh_edc: %u, e2e_edc %u\n", hbh_edc, orpl_current_edc());
+//  }
 
   /* Loop over the parents ordered by increasing rank, try to insert
    * them in the routing set until EDC does not improve. This is as
@@ -209,7 +209,7 @@ orpl_calculate_edc(int verbose)
         /* The parent is not part of the forwarder set. This means next parents won't be
          * part of the set either. */
 //        if(verbose) {
-//          printf("\n");
+//         printf("\n");
 //        }
         ANNOTATE("#L %u 0\n", curr_id);
       }
@@ -262,7 +262,7 @@ neighbor_link_callback(rpl_parent_t *parent, int known, int edc)
       hbh_edc = ((hbh_edc_prev * EDC_ALPHA) + (weighted_curr_hbh_edc * (EDC_SCALE-EDC_ALPHA))) / EDC_SCALE;
     }
 
-    PRINTF("ORPL: updated hbh_edc %u -> %u (%u %u)\n", hbh_edc_prev, hbh_edc, curr_hbh_edc, weighted_curr_hbh_edc);
+    //ORPL_LOG("ORPL: updated hbh_edc %u -> %u (%u %u)\n", hbh_edc_prev, hbh_edc, curr_hbh_edc, weighted_curr_hbh_edc);
 
     /* Calculate EDC and update rank */
     if(parent && parent->dag) {

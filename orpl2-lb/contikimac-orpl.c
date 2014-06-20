@@ -64,16 +64,16 @@
 #define PRINTDEBUG(...)
 #endif
 
-#if WITH_ORPL_LB
+#if 1//WITH_ORPL_LB
 #include "deployment.h"
 #include "orpl-log.h"
 #define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 60 //guard timer before starting load balancing
-#define CYCLE_MAX  (2000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
+#define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
+#define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.50
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
-#define DC_ALPHA 0.50
+#define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
 #define HYSTERESIS 5 // 0.05
 
@@ -83,7 +83,8 @@ uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
 #endif /*CONTIKIMAC_CONF_CYCLE_TIME*/
 
-static struct ctimer ct;//timer used to manage the cycle
+static struct ctimer ct_check;//timer used to manage the cycle
+static struct ctimer ct_guard; //timer used for the guard_time
 static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
@@ -612,7 +613,7 @@ powercycle(struct rtimer *t, void *ptr)
 #if WITH_ORPL_LB
 static void setLoadBalancing(int mode){
   loadbalancing_is_on=mode;
-  ORPL_LOG("LB on\n");
+  //ORPL_LOG("LB on\n");
 #if CHANGE_STROBE_TIME
   if(loadbalancing_is_on){
       default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
@@ -620,6 +621,7 @@ static void setLoadBalancing(int mode){
   else{
     default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
   }
+  ctimer_stop(&ct_guard);
 #endif
 }
 
@@ -659,40 +661,43 @@ static void managecycle(void *ptr){
       }
 
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
-      if((cpt+1)>=LB_GUARD_TIME/4){//cpt+1 because we wait 1 minute before entering the stuff
-        printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
 
-        if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
-          uint32_t temp_cycle;
-          uint16_t weight=0;//the weight must be defined based on the current duty-cycle
-          uint32_t cycle_diff;
-          if(weighted_dc  > objective_dc){
-            weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
-          }
-          else if(weighted_dc  < objective_dc){
-            weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
-          }
+      printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
 
-          if(weight > 100){
-            weight=100;
-          }
-          cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
-          if(weighted_dc > objective_dc){
-            temp_cycle = cycle_time+cycle_diff;
-            if(temp_cycle > CYCLE_MAX){
-              temp_cycle=CYCLE_MAX;
-            }
-          }
-          else{
-            temp_cycle = cycle_time-cycle_diff;
-            if(temp_cycle < CYCLE_MIN){
-              temp_cycle=CYCLE_MIN;
-            }
-          }
-          cycle_time=temp_cycle;
+      if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+        uint32_t temp_cycle;
+        uint16_t weight=0;//the weight must be defined based on the current duty-cycle
+        uint32_t cycle_diff;
+        if(weighted_dc  > objective_dc){
+          weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
         }
-        printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+        else if(weighted_dc  < objective_dc){
+          weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
+        }
+
+        if(weight > 100){
+          if(weight > 500){//force a node with a brutal consumption increase to rest more
+            weighted_dc=periodic_dc;
+         }
+          weight=100;
+        }
+        cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
+        if(weighted_dc > objective_dc){
+          temp_cycle = cycle_time+cycle_diff;
+          if(temp_cycle > CYCLE_MAX){
+            temp_cycle=CYCLE_MAX;
+          }
+        }
+        else{
+          temp_cycle = cycle_time-cycle_diff;
+          if(temp_cycle < CYCLE_MIN){
+            temp_cycle=CYCLE_MIN;
+          }
+        }
+        cycle_time=temp_cycle;
       }
+      printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+
     }
 
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
@@ -708,7 +713,7 @@ static void managecycle(void *ptr){
 #if WITH_SFD_COMPUTATION
     printf("cc2420: seen %lu decoded %lu\n", packet_seen_count, sfd_decoded_count);
 #endif
-    ctimer_reset(&ct);
+    ctimer_reset(&ct_check);
   }
 }
 #endif /*WITH_ORPL_LB*/
@@ -1054,7 +1059,18 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 	  orpl_broadcast_done();
   }
 
-  uint16_t strobe_duration = EDC_TICKS_TO_METRIC(RTIMER_NOW() - t0);
+uint16_t strobe_duration;
+#if WITH_ORPL_LB
+  if(!loadbalancing_is_on){
+    strobe_duration = EDC_TICKS_TO_METRIC(RTIMER_NOW() - t0);
+  }
+  else{
+    strobe_duration = (uint16_t)((RTIMER_NOW() - t0) / (CYCLE_MAX / EDC_DIVISOR));
+  }
+#else /* WITH_ORPL_LB */
+  strobe_duration = EDC_TICKS_TO_METRIC(RTIMER_NOW() - t0);
+#endif /* WITH_ORPL_LB */
+
   uint16_t edc_inc = strobe_duration;
   if(edc_inc < EDC_DIVISOR/16) {
     edc_inc = EDC_DIVISOR/16; /* Min "penalty" for any attempted tx */
@@ -1368,7 +1384,7 @@ init(void)
   PT_INIT(&pt);
 
 #if WITH_ORPL_LB
-  default_strobe_time=CYCLE_TIME;//
+  default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;//
   //bcast_strobe_time=CYCLE_TIME;
   bcast_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;//the bcast strobe time never changed
   strobe_time=bcast_strobe_time;
@@ -1379,9 +1395,11 @@ init(void)
   contikimac_is_on = 1;
 
 #if WITH_ORPL_LB
-  ctimer_set(&ct, LB_DATAPERIOD,
+  ctimer_set(&ct_guard, LB_GUARD_TIME-5*CLOCK_SECOND,
+             (void (*)(void *))setLoadBalancing, 1);//-5*CLOCK_SECOND to be sure to be ready for the next check
+  ctimer_set(&ct_check, LB_DATAPERIOD,
              (void (*)(void *))managecycle, NULL);
-  setLoadBalancing(1);
+  //setLoadBalancing(1);
 #endif /* WITH_ORPL_LB*/
 
 #if WITH_PHASE_OPTIMIZATION
