@@ -676,9 +676,6 @@ static void managecycle(void *ptr){
         }
 
         if(weight > 100){
-          if(weight > 500){//force a node with a brutal consumption increase to rest more
-            weighted_dc=periodic_dc;
-         }
           weight=100;
         }
         cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
