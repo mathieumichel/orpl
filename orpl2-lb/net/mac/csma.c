@@ -51,6 +51,8 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
+#define CSMA_ADVANCED 1
+
 #if WITH_ORPL
 #include "net/uip.h"
 #include "orpl.h"
@@ -234,7 +236,11 @@ packet_sent(void *ptr, int status, int num_transmissions)
     if(metadata != NULL) {
       sent = metadata->sent;
       cptr = metadata->cptr;
+#if CSMA_ADVANCED
+      num_tx = n->transmissions + n->collisions/8;
+#else
       num_tx = n->transmissions;
+#endif
       if(status == MAC_TX_COLLISION ||
          status == MAC_TX_NOACK) {
 
@@ -251,26 +257,54 @@ packet_sent(void *ptr, int status, int num_transmissions)
         default:
           PRINTF("csma: rexmit err %d, %d\n", status, n->transmissions);
         }
-
-        /* The retransmission time must be proportional to the channel
+#if CSMA_ADVANCED
+        if(status == MAC_TX_COLLISION) { //added by MF
+          time = default_timebase() / 2;
+        } else {
+          int i;
+          /* The retransmission time must be proportional to the channel
            check interval of the underlying radio duty cycling layer. */
-        time = default_timebase();
+          time = default_timebase() / 3;
 
-        /* The retransmission time uses a linear backoff so that the
+          /* The retransmission time uses a linear backoff so that the
            interval between the transmissions increase with each
            retransmit. */
-        backoff_transmissions = n->transmissions + 1;
+          backoff_transmissions = 1;
+          for(i=0; i<num_tx-1; i++) {
+            backoff_transmissions *= 3;
+          }
 
-        /* Clamp the number of backoffs so that we don't get a too long
+          /* Clamp the number of backoffs so that we don't get a too long
            timeout here, since that will delay all packets in the
            queue. */
-        if(backoff_transmissions > 3) {
-          backoff_transmissions = 3;
+          if(backoff_transmissions > 3 * 3) {
+            backoff_transmissions = 3 * 3;
+          }
+
+          time = default_timebase() + (random_rand() % (backoff_transmissions * time));
         }
+        if(num_tx < metadata->max_transmissions) {
+#else
+            /* The retransmission time must be proportional to the channel
+                       check interval of the underlying radio duty cycling layer. */
+            time = default_timebase();
 
-        time = time + (random_rand() % (backoff_transmissions * time));
+            /* The retransmission time uses a linear backoff so that the
+                       interval between the transmissions increase with each
+                       retransmit. */
+            backoff_transmissions = n->transmissions + 1;
 
-        if(n->transmissions < metadata->max_transmissions) {
+            /* Clamp the number of backoffs so that we don't get a too long
+                       timeout here, since that will delay all packets in the
+                       queue. */
+            if(backoff_transmissions > 3) {
+              backoff_transmissions = 3;
+            }
+
+            time = time + (random_rand() % (backoff_transmissions * time));
+
+            if(n->transmissions < metadata->max_transmissions) {
+#endif
           PRINTF("csma: retransmitting with time %lu %p\n", time, q);
           ctimer_set(&n->transmit_timer, time,
                      transmit_packet_list, n);
@@ -281,18 +315,18 @@ packet_sent(void *ptr, int status, int num_transmissions)
 #if WITH_ORPL
           /* Failed downwards transmission. Trigger false positive recovery. */
         	if(ORPL_WITH_FP_RECOVERY && !orpl_is_root() && packetbuf_attr(PACKETBUF_ATTR_ORPL_DIRECTION) == direction_down) {
-//        		ORPL_LOG_FROM_PACKETBUF("Csma:! triggering false positive recovery %u after %d tx, %d c.",
-  //      		    ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
-//        		free_packet(n, q);
-//        		/* GIve another try, upwards this time, after inserting in blacklist. */
-//        		orpl_blacklist_insert(orpl_packetbuf_seqno());
-//        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
-//        		ORPL_LOG_FROM_PACKETBUF("Tcpip: false positive recovery");
-//        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
-//        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
-//        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
-//        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
-//        		NETSTACK_MAC.send(sent, cptr);
+        		ORPL_LOG_FROM_PACKETBUF("Csma:! triggering fp recovery %u after %d tx, %d c.",
+        		    ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
+        		free_packet(n, q);
+        		/* GIve another try, upwards this time, after inserting in blacklist. */
+        		orpl_blacklist_insert(orpl_packetbuf_seqno());
+        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
+        		ORPL_LOG_FROM_PACKETBUF("Tcpip: fp recovery");
+        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
+        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
+        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
+        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
+        		NETSTACK_MAC.send(sent, cptr);
         	} else {
         	  ORPL_LOG_FROM_PACKETBUF("Csma:! dropping %u after %d tx, %d collisions",
         	      ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);

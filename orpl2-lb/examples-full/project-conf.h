@@ -74,6 +74,9 @@ typedef uint32_t rtimer_clock_t;
 #undef UIP_CONF_UDP_CHECKSUMS
 #define UIP_CONF_UDP_CHECKSUMS   0
 
+#undef QUEUEBUF_CONF_NUM
+#define QUEUEBUF_CONF_NUM 4
+
 #include "tools/orpl-log.h"
 #include "orpl-contiki-conf.h"
 

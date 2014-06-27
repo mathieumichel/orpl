@@ -116,9 +116,6 @@ orpl_softack_input_callback(const uint8_t *frame, uint8_t framelen, uint8_t **ac
       //do_ack = orpl_anycast_parse_802154_frame((uint8_t *)frame, framelen, 0).do_ack;
 #if WITH_ORPL_LOADCTRL
       do_ack = (orpl_anycast_802154_frame_must_ack((uint8_t *)frame, framelen) && queuebuf_len < queuebuf_max_len);
-      if(!do_ack && queuebuf_len >= queuebuf_max_len){
-        printf("plop %u-%u\n", queuebuf_len, queuebuf_max_len);
-      }
 #else /*WITH_ORPL_LOADCTRL*/
       do_ack = orpl_anycast_802154_frame_must_ack((uint8_t *)frame, framelen);
 #endif /*WITH_ORPL_LOADCTRL*/

@@ -64,14 +64,14 @@
 #define PRINTDEBUG(...)
 #endif
 
-#if 1//WITH_ORPL_LB
+#if WITH_ORPL_LB
 #include "deployment.h"
 #include "orpl-log.h"
 #define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
 #define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.50
+#define DUTY_CYCLE_TARGET   0.75
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
@@ -598,10 +598,14 @@ powercycle(struct rtimer *t, void *ptr)
 #else
 
 #if WITH_CONTIKIMIAC_JITTER
+#if WITH_ORPL_LB
+      schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CONTIKIMAC_CONF_CYCLE_TIME/8)));
+#else /* WITH_ORPL_LB */
       schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CYCLE_TIME/8)));
-#else
+#endif /* WITH_ORPL_LB */
+#else /* WITH_CONTIKIMIAC_JITTER */
       schedule_powercycle_fixed(t, CYCLE_TIME + cycle_start);
-#endif
+#endif /* WITH_CONTIKIMIAC_JITTER */
       PT_YIELD(&pt);
 #endif
     }

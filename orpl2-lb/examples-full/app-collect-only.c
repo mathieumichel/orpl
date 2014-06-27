@@ -52,7 +52,7 @@
 static uint16_t compteur=2;
 #endif
 
-#define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 5 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
 static struct simple_udp_connection unicast_connection;
@@ -148,7 +148,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #endif
     NETSTACK_RDC.off(1);
   } else {
-    etimer_set(&periodic_timer, 2 * 60 * CLOCK_SECOND);
+    etimer_set(&periodic_timer, 10 * 60 * CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {
