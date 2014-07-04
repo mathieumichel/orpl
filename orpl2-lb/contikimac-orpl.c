@@ -55,6 +55,8 @@
 
 #include <string.h>
 
+#define WITH_BURST 1  //only for collect_only
+
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 #if DEBUG
@@ -68,10 +70,10 @@
 #include "deployment.h"
 #include "orpl-log.h"
 #define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_TIME 8*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.75
+#define DUTY_CYCLE_TARGET   0.60
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
@@ -89,7 +91,7 @@ static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
 uint16_t periodic_dc, objective_dc, weighted_dc;
-//uint16_t periodic_tx_dc=0;
+uint16_t periodic_tx_dc=0;
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
 #endif /*WITH_ORPL_LB*/
@@ -179,7 +181,8 @@ static int we_are_receiving_burst = 0;
 
 /* INTER_PACKET_DEADLINE is the maximum time a receiver waits for the
    next packet of a burst when FRAME_PENDING is set. */
-#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 32
+
+#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 20  // prev =32
 
 /* ContikiMAC performs periodic channel checks. Each channel check
    consists of two or more CCA checks. CCA_COUNT_MAX is the number of
@@ -646,7 +649,7 @@ static void managecycle(void *ptr){
 
     if(loadbalancing_is_on){//cpt+1 because we wait 1 minute before entering the stuff
       periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
-      //periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
+      periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
 
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
@@ -920,7 +923,11 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 #if !RDC_CONF_HARDWARE_CSMA
     /* Check if there are any transmissions by others. */
     /* TODO: why does this give collisions before sending with the mc1322x? */
+#if WITH_BURST
+  if(1==1){
+#else /* WITH_BURST */
   if(is_receiver_awake == 0) {
+#endif /* WITH_BURST */
     int i;
     for(i = 0; i < CCA_COUNT_MAX_TX; ++i) {
       t0 = RTIMER_NOW();
@@ -1186,16 +1193,20 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
   /* The receiver needs to be awoken before we send */
   is_receiver_awake = 0;
   do { /* A loop sending a burst of packets from buf_list */
-//    next = list_item_next(curr);
-    next = NULL; /* The current implementation of ORPL
-    does not support burst. We just send packets one by one. */
+#if WITH_BURST
+    next = list_item_next(curr);
+#else
+    next = NULL; /* The current implementation of ORPL does not support burst. We just send packets one by one. */
+#endif
+
 
     /* Prepare the packetbuf */
     queuebuf_to_packetbuf(curr->buf);
-//    if(next != NULL) {
-//      packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 1);
-//    }
-
+#if WITH_BURST
+    if(next != NULL) {
+      packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 1);
+    }
+#endif
     /* Send the current packet */
     ret = send_packet(sent, ptr, curr, is_receiver_awake);
     if(ret != MAC_TX_DEFERRED) {
@@ -1207,6 +1218,7 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
         /* We're in a burst, no need to wake the receiver up again */
         is_receiver_awake = 1;
         curr = next;
+        //printf("burst\n");
       }
     } else {
       /* The transmission failed, we stop the burst */

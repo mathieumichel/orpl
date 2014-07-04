@@ -23,7 +23,7 @@
 #error UP_ONLY is not set
 #endif
 
-#define SEND_INTERVAL   (1 * 5 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 15 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
 static char buf[APP_PAYLOAD_LEN];
@@ -102,7 +102,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {
       etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
+      PROCESS_WAIT_UNTIL(etimer_expired(&send_timer));
 
       if(rank != 0xffff) {
         app_send_to(ROOT_ID);
@@ -110,7 +110,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
         printf("App: not in DODAG (%u %u)\n", node_id, ROOT_ID);
       }
 
-      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+      PROCESS_WAIT_UNTIL(etimer_expired(&periodic_timer));
       etimer_reset(&periodic_timer);
     }
   }

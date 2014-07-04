@@ -52,7 +52,7 @@
 static uint16_t compteur=2;
 #endif
 
-#define SEND_INTERVAL   (1 * 5 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 15 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
 static struct simple_udp_connection unicast_connection;

@@ -180,24 +180,27 @@ handle_dio_timer(void *ptr)
     if(dc_obj_metric !=0){
       dc_obj_metric=dc_obj_metric/((uint32_t)dc_obj_count);
     }
-    if(dc_obj_metric !=0 && dc_fixed!=2){
-        if(dc_obj_metric < prev){
-            dio_dc_objective=dio_dc_objective-5;
-            dc_fixed==0;//previous step was decrease
+    if(dc_fixed<2){//optimum not yet found
+      if(dc_obj_metric !=0){
+        if(dc_obj_metric <= prev){
+          dio_dc_objective=dio_dc_objective-5;
+          dc_fixed=0;//previous step was decrease
         }
         else if(dc_obj_metric > prev){
-            dc_fixed++;
-            if(dc_fixed==2){
-              dio_dc_objective=dio_dc_objective + 5;
-            }
+          dc_fixed++;
+          if(dc_fixed==2){
+            dio_dc_objective=dio_dc_objective + 5;
+          }
         }
         prev=dc_obj_metric;
+      }
+      else{//starting case
+        dio_dc_objective=dc_min+(dc_max-dc_min)/2;
+        prev=dio_dc_objective;
+      }
     }
-    else{
-      dio_dc_objective=dc_min+(dc_max-dc_min)/2;
-      prev=dio_dc_objective;
-    }
-    printf("ORPL_LB: dc_objective %u-%u-%u  %lu\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
+    //printf("ORPL_LB: dc_objective %u-%u-%u  %lu\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
+    printf("ORPL_LB: dc_objective %u-%lu-%u\n",dio_dc_objective,dc_obj_metric,dc_fixed);
     dio_dc_obj_sn=dio_dc_obj_sn++;
     dc_obj_metric=0;//reset
     dc_obj_count=0;//reset
