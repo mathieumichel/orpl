@@ -55,7 +55,7 @@
 
 #include <string.h>
 
-#define WITH_BURST 1  //only for collect_only
+#define WITH_BURST 0  //only for collect_only
 
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
@@ -70,14 +70,14 @@
 #include "deployment.h"
 #include "orpl-log.h"
 #define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 8*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.60
+#define DUTY_CYCLE_TARGET   0.65
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define HYSTERESIS 5 // 0.05
+#define HYSTERESIS 2 // 0.02
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
@@ -91,7 +91,9 @@ static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
 uint16_t periodic_dc, objective_dc, weighted_dc;
+#if WITH_ORPL_LB_DIO_TARGET
 uint16_t periodic_tx_dc=0;
+#endif
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
 #endif /*WITH_ORPL_LB*/
@@ -181,9 +183,11 @@ static int we_are_receiving_burst = 0;
 
 /* INTER_PACKET_DEADLINE is the maximum time a receiver waits for the
    next packet of a burst when FRAME_PENDING is set. */
-
-#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 20  // prev =32
-
+#if WITH_BURST
+#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 10  // prev =32
+#else
+#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 32  // prev =32
+#endif
 /* ContikiMAC performs periodic channel checks. Each channel check
    consists of two or more CCA checks. CCA_COUNT_MAX is the number of
    CCAs to be done for each periodic channel check. The default is
@@ -602,7 +606,8 @@ powercycle(struct rtimer *t, void *ptr)
 
 #if WITH_CONTIKIMIAC_JITTER
 #if WITH_ORPL_LB
-      schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CONTIKIMAC_CONF_CYCLE_TIME/8)));
+      //schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CONTIKIMAC_CONF_CYCLE_TIME/8)));
+      schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CYCLE_TIME/8)));
 #else /* WITH_ORPL_LB */
       schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CYCLE_TIME/8)));
 #endif /* WITH_ORPL_LB */
@@ -649,8 +654,9 @@ static void managecycle(void *ptr){
 
     if(loadbalancing_is_on){//cpt+1 because we wait 1 minute before entering the stuff
       periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
+#if WITH_ORPL_LB_DIO_TARGET
       periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
-
+#endif
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
       if(dio_dc_objective==0){
         objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
@@ -1033,8 +1039,12 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
                            NETSTACK_RADIO.channel_clear() == 0) {
         wt = RTIMER_NOW();
         while(RTIMER_CLOCK_LT(RTIMER_NOW(), wt + AFTER_ACK_DETECTECT_WAIT_TIME)) { }
-
+#if WITH_BURST
+        len = NETSTACK_RADIO.read(ackbuf, ACK_LEN*2);
+#else
         len = NETSTACK_RADIO.read(ackbuf, ACK_LEN);
+#endif
+
         if(len == ACK_LEN && seqno == ackbuf[2]) {
           /* Received ack for broadcast, perform beacon counting */
           if(is_broadcast) {
@@ -1056,6 +1066,11 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
             }
           }
         }
+#if WITH_BURST
+        else {
+         collisions++;
+                }
+#endif
       }
 #endif /* RDC_CONF_HARDWARE_ACK */
 
@@ -1218,7 +1233,6 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
         /* We're in a burst, no need to wake the receiver up again */
         is_receiver_awake = 1;
         curr = next;
-        //printf("burst\n");
       }
     } else {
       /* The transmission failed, we stop the burst */
@@ -1305,6 +1319,7 @@ input_packet(void)
         on();
         /* Set a timer to turn the radio off in case we do not receive
 	   a next packet */
+        ctimer_stop(&ct);
         ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
       } else {
         off();

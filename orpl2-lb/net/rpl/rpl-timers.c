@@ -200,7 +200,7 @@ handle_dio_timer(void *ptr)
       }
     }
     //printf("ORPL_LB: dc_objective %u-%u-%u  %lu\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
-    printf("ORPL_LB: dc_objective %u-%lu-%u\n",dio_dc_objective,dc_obj_metric,dc_fixed);
+    printf("ORPL_LB: dc_objective %u-%lu\n",dio_dc_objective,dc_obj_metric);
     dio_dc_obj_sn=dio_dc_obj_sn++;
     dc_obj_metric=0;//reset
     dc_obj_count=0;//reset

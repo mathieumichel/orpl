@@ -51,8 +51,8 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
-#define CSMA_ADVANCED 1
-
+#define CSMA_ADVANCED 0
+extern uint8_t queuebuf_len;
 #if WITH_ORPL
 #include "net/uip.h"
 #include "orpl.h"
@@ -371,7 +371,7 @@ send_packet(mac_callback_t sent, void *ptr)
   struct rdc_buf_list *q;
   struct neighbor_queue *n;
   static uint16_t seqno;
-
+ ORPL_LOG("Queue : %u\n",queuebuf_len);
 #if WITH_ORPL
     /* Using packetbuf address would lead to a single queue for all anycasts.
        * We use the IPv6 UUID to have one queue per destination instead. */
