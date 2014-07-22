@@ -52,7 +52,11 @@
 static uint16_t compteur=2;
 #endif
 
+#if WITH_ORPL_LOADCTRL
+#define SEND_INTERVAL   (1 * 3 * CLOCK_SECOND)
+#else
 #define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
+#endif
 #define UDP_PORT 1234
 
 static struct simple_udp_connection unicast_connection;
@@ -124,9 +128,9 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
-    printf("Node id unset, my mac is ");
-    uip_debug_lladdr_print(&rimeaddr_node_addr);
-    printf("\n");
+//    printf("Node id unset, my mac is ");
+//    uip_debug_lladdr_print(&rimeaddr_node_addr);
+//    printf("\n");
     PROCESS_EXIT();
   }
 
@@ -148,7 +152,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #endif
     NETSTACK_RDC.off(1);
   } else {
-    etimer_set(&periodic_timer, 10 * 60 * CLOCK_SECOND);
+    etimer_set(&periodic_timer, 2 * 60 * CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {
@@ -189,7 +193,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
       if(orpl_current_edc() != 0xffff) {
         app_send_to(ROOT_ID);
       } else {
-        printf("App: not in DODAG\n");
+        //printf("App: not in DODAG\n");
       }
 #endif
       PROCESS_WAIT_UNTIL(etimer_expired(&periodic_timer));

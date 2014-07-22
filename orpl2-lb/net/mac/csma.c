@@ -51,13 +51,18 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
+#if WITH_ORPL_LOADCTRL
+#define CSMA_ADVANCED 1  //only for collect_only
+#else
 #define CSMA_ADVANCED 0
 extern uint8_t queuebuf_len;
+#endif
 #if WITH_ORPL
 #include "net/uip.h"
 #include "orpl.h"
 #include "orpl-anycast.h"
 #define UIP_IP_BUF ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
+uint16_t packet_count;
 #endif /* WITH_ORPL */
 
 #include <string.h>
@@ -315,23 +320,25 @@ packet_sent(void *ptr, int status, int num_transmissions)
 #if WITH_ORPL
           /* Failed downwards transmission. Trigger false positive recovery. */
         	if(ORPL_WITH_FP_RECOVERY && !orpl_is_root() && packetbuf_attr(PACKETBUF_ATTR_ORPL_DIRECTION) == direction_down) {
-        		ORPL_LOG_FROM_PACKETBUF("Csma:! triggering fp recovery %u after %d tx, %d c.",
-        		    ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
-        		free_packet(n, q);
-        		/* GIve another try, upwards this time, after inserting in blacklist. */
-        		orpl_blacklist_insert(orpl_packetbuf_seqno());
-        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
-        		ORPL_LOG_FROM_PACKETBUF("Tcpip: fp recovery");
-        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
-        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
-        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
-        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
-        		NETSTACK_MAC.send(sent, cptr);
+//        		ORPL_LOG_FROM_PACKETBUF("Csma:! triggering fp recovery %u after %d tx, %d c.",
+//        		    ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
+//        		free_packet(n, q);
+//        		/* GIve another try, upwards this time, after inserting in blacklist. */
+//        		orpl_blacklist_insert(orpl_packetbuf_seqno());
+//        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
+//        		ORPL_LOG_FROM_PACKETBUF("Tcpip: fp recovery");
+//        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
+//        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
+//        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
+//        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
+//        		NETSTACK_MAC.send(sent, cptr);
         	} else {
         	  ORPL_LOG_FROM_PACKETBUF("Csma:! dropping %u after %d tx, %d collisions",
         	      ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
         	  PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
         	      status, n->transmissions, n->collisions);
+            packet_count+=1;
+            packetbuf_set_attr(PACKETBUF_ATTR_EDC, 0xffff);//MF-BUG
         	  free_packet(n, q);
         	  mac_call_sent_callback(sent, cptr, status, num_tx);
         	}
@@ -349,6 +356,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
                                  &rimeaddr_null)) {
             ORPL_LOG_FROM_PACKETBUF("Csma: success %u after %d tx, %d collisions",
                 ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER)), n->transmissions, n->collisions);
+            packet_count+=1;
           }
 #endif /* WITH_ORPL */
           PRINTF("csma: rexmit ok %d\n", n->transmissions);
@@ -371,7 +379,7 @@ send_packet(mac_callback_t sent, void *ptr)
   struct rdc_buf_list *q;
   struct neighbor_queue *n;
   static uint16_t seqno;
- ORPL_LOG("Queue : %u\n",queuebuf_len);
+ //ORPL_LOG("Queue : %u\n",queuebuf_len);
 #if WITH_ORPL
     /* Using packetbuf address would lead to a single queue for all anycasts.
        * We use the IPv6 UUID to have one queue per destination instead. */

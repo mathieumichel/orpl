@@ -109,7 +109,7 @@ add_to_forwarder_set(rpl_parent_t *curr_p, rpl_rank_t curr_p_rank, uint16_t ackc
 //        A,
 //        B,
 //        ackcount,
-//        total_tx_count
+//       total_tx_count
 //   );
 //  }
 
@@ -189,7 +189,7 @@ orpl_calculate_edc(int verbose)
       rpl_rank_t tentative_edc;
 
 //      if(verbose) {
-//        printf("ORPL: EDC -> node %3u rank: %5u ack %u/%u ", curr_id, curr_p_rank, curr_p_ackcount, orpl_broadcast_count);
+//       printf("ORPL: EDC -> node %3u rank: %5u ack %u/%u ", curr_id, curr_p_rank, curr_p_ackcount, orpl_broadcast_count);
 //      }
 
       tentative_edc = add_to_forwarder_set(curr_p, curr_p_rank, curr_p_ackcount,
@@ -202,7 +202,7 @@ orpl_calculate_edc(int verbose)
         edc = tentative_edc;
         forwarder_set_size++;
 //        if(verbose) {
-//          printf("*\n");
+//         printf("*\n");
 //        }
         ANNOTATE("#L %u 1\n", curr_id);
       } else {

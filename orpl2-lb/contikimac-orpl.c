@@ -55,7 +55,12 @@
 
 #include <string.h>
 
-#define WITH_BURST 0  //only for collect_only
+#if WITH_ORPL_LOADCTRL
+#define WITH_BURST 1  //only for collect_only
+#else
+#define WITH_BURST 0
+#endif
+
 
 #define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
@@ -73,23 +78,24 @@
 #define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.65
+#define DUTY_CYCLE_TARGET   0.50
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define HYSTERESIS 2 // 0.02
+#define HYSTERESIS 5 // 0.05
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
 #endif /*CONTIKIMAC_CONF_CYCLE_TIME*/
-
 static struct ctimer ct_check;//timer used to manage the cycle
 static struct ctimer ct_guard; //timer used for the guard_time
 static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
+extern uint16_t packet_count;
+uint16_t packet_count_prev;
 uint16_t periodic_dc, objective_dc, weighted_dc;
 #if WITH_ORPL_LB_DIO_TARGET
 uint16_t periodic_tx_dc=0;
@@ -184,7 +190,7 @@ static int we_are_receiving_burst = 0;
 /* INTER_PACKET_DEADLINE is the maximum time a receiver waits for the
    next packet of a burst when FRAME_PENDING is set. */
 #if WITH_BURST
-#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 10  // prev =32
+#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 32 // prev =32
 #else
 #define INTER_PACKET_DEADLINE               CLOCK_SECOND / 32  // prev =32
 #endif
@@ -200,10 +206,14 @@ static int we_are_receiving_burst = 0;
 
 /* Before starting a transmission, Contikimac checks the availability
    of the channel with CCA_COUNT_MAX_TX consecutive CCAs */
+#if WITH_BURST
+#define CCA_COUNT_MAX_TX                   2
+#else
 #ifdef CONTIKIMAC_CONF_CCA_COUNT_MAX_TX
 #define CCA_COUNT_MAX_TX                   (CONTIKIMAC_CONF_CCA_COUNT_MAX_TX)
 #else
 #define CCA_COUNT_MAX_TX                   6
+#endif
 #endif
 
 /* CCA_CHECK_TIME is the time it takes to perform a CCA check. */
@@ -605,12 +615,7 @@ powercycle(struct rtimer *t, void *ptr)
 #else
 
 #if WITH_CONTIKIMIAC_JITTER
-#if WITH_ORPL_LB
-      //schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CONTIKIMAC_CONF_CYCLE_TIME/8)));
       schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CYCLE_TIME/8)));
-#else /* WITH_ORPL_LB */
-      schedule_powercycle(t, CYCLE_TIME - (random_rand() % (CYCLE_TIME/8)));
-#endif /* WITH_ORPL_LB */
 #else /* WITH_CONTIKIMIAC_JITTER */
       schedule_powercycle_fixed(t, CYCLE_TIME + cycle_start);
 #endif /* WITH_CONTIKIMIAC_JITTER */
@@ -623,18 +628,35 @@ powercycle(struct rtimer *t, void *ptr)
 }
 /*---------------------------------------------------------------------------*/
 #if WITH_ORPL_LB
+
+/**
+ * check is the load balancing is effective,
+ * if not (for example the node cannot reduce its load) disable the mechanism
+ */
+static void checkBalance(){
+  if(loadbalancing_is_on && packet_count_prev >=50 && packet_count > packet_count_prev-10){
+    loadbalancing_is_on=0;
+    cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
+  }
+  ORPL_LOG(" (%u-%u)",packet_count_prev, packet_count);
+  packet_count_prev=packet_count;
+  packet_count=0;
+
+}
+
 static void setLoadBalancing(int mode){
   loadbalancing_is_on=mode;
-  //ORPL_LOG("LB on\n");
 #if CHANGE_STROBE_TIME
   if(loadbalancing_is_on){
       default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
+
   }
   else{
     default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
   }
-  ctimer_stop(&ct_guard);
 #endif
+  ctimer_stop(&ct_guard);
+
 }
 
 static void managecycle(void *ptr){
@@ -652,7 +674,7 @@ static void managecycle(void *ptr){
     last_rx = curr_rx;
     last_time = curr_time;
 
-    if(loadbalancing_is_on){//cpt+1 because we wait 1 minute before entering the stuff
+    if(loadbalancing_is_on){
       periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
 #if WITH_ORPL_LB_DIO_TARGET
       periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
@@ -675,10 +697,11 @@ static void managecycle(void *ptr){
 
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
 
-      printf("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
-
+      uint8_t exclusion=0;
+      ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
+      //if((node_id!= 83 || node_id!=38) && (weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS)){//we change only if the weighted-dc says we have to
       if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
-        uint32_t temp_cycle;
+      uint32_t temp_cycle;
         uint16_t weight=0;//the weight must be defined based on the current duty-cycle
         uint32_t cycle_diff;
         if(weighted_dc  > objective_dc){
@@ -706,9 +729,20 @@ static void managecycle(void *ptr){
         }
         cycle_time=temp_cycle;
       }
-      printf(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
-
+//      if(node_id==83 || node_id==38){
+//        printf("-> 500 fixed\n");
+//      }
+ //     else{
+      ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+ //     }
     }
+    else{
+      ORPL_LOG("ORPL_LB : fixed");
+    }
+    if((cpt+1)%4==0){//every 4 LB_data periods we check the network load
+      checkBalance();
+    }
+    ORPL_LOG("\n");
 
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
@@ -716,6 +750,7 @@ static void managecycle(void *ptr){
                   delta_tx, delta_rx, delta_time,
                   (unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND)
     );
+
 
 
     //ANNOTATE("#A int=%lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
@@ -910,6 +945,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   
   /* Switch off the radio to ensure that we didn't start sending while
      the radio was doing a channel check. */
+
   off();
 
 
@@ -1233,6 +1269,7 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
         /* We're in a burst, no need to wake the receiver up again */
         is_receiver_awake = 1;
         curr = next;
+        //ORPL_LOG("burst\n");
       }
     } else {
       /* The transmission failed, we stop the burst */
@@ -1245,17 +1282,28 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
 /* Timer callback triggered when receiving a burst, after having
    waited for a next packet for a too long time. Turns the radio off
    and leaves burst reception mode */
+
+
 static void
 recv_burst_off(void *ptr)
 {
   off();
   we_are_receiving_burst = 0;
 }
+static void
+wait_burst(void *ptr)
+{
+  static struct ctimer ct2;
+  NETSTACK_RADIO.on();
+  radio_is_on=1;
+  ctimer_set(&ct2, CLOCK_SECOND/24, recv_burst_off, NULL);
+}
 /*---------------------------------------------------------------------------*/
 static void
 input_packet(void)
 {
   static struct ctimer ct;
+
   if(!we_are_receiving_burst) {
     off();
   }
@@ -1316,11 +1364,16 @@ input_packet(void)
       /* If FRAME_PENDING is set, we are receiving a packets in a burst */
       we_are_receiving_burst = packetbuf_attr(PACKETBUF_ATTR_PENDING);
       if(we_are_receiving_burst) {
-        on();
+        ctimer_stop(&ct);
+        //ORPL_LOG("burst on\n");
+        off();
+        //on();
+        //NETSTACK_RADIO.on();
+        //radio_is_on=1;
         /* Set a timer to turn the radio off in case we do not receive
 	   a next packet */
-        ctimer_stop(&ct);
-        ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
+        ctimer_set(&ct, CLOCK_SECOND/32, wait_burst, NULL);
+        //ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
       } else {
         off();
         ctimer_stop(&ct);
@@ -1427,7 +1480,6 @@ init(void)
              (void (*)(void *))setLoadBalancing, 1);//-5*CLOCK_SECOND to be sure to be ready for the next check
   ctimer_set(&ct_check, LB_DATAPERIOD,
              (void (*)(void *))managecycle, NULL);
-  //setLoadBalancing(1);
 #endif /* WITH_ORPL_LB*/
 
 #if WITH_PHASE_OPTIMIZATION
