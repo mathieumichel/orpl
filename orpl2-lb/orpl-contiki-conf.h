@@ -45,6 +45,7 @@
 
 #define WITH_ORPL_LB 1
 
+#define COLLECT_ONLY 1 //used for adapt logging to require less memory
 #if WITH_ORPL_LB
 #define WITH_ORPL_LB_DIO_TARGET 0
 #else /*WITH_ORPL_LB*/
