@@ -79,7 +79,7 @@
 #define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.50
+#define DUTY_CYCLE_TARGET   0.50 //0.45
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
@@ -644,7 +644,7 @@ static void setLoadBalancing(int mode){
   }
   else{
     //ORPL_LOG("LB OFF\n");
-    default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
+    //default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
     cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
   }
   ctimer_stop(&ct_guard);//disable the guard timer
@@ -698,8 +698,8 @@ static void managecycle(void *ptr){
 
 
       if(weighted_dc==0){
-        //weighted_dc=objective_dc;
-        weighted_dc=periodic_dc;
+        weighted_dc=objective_dc;
+        //weighted_dc=periodic_dc;
       }
 
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);

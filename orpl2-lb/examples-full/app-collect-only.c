@@ -53,9 +53,9 @@ static uint16_t compteur=2;
 #endif
 
 #if WITH_ORPL_LOADCTRL
-#define SEND_INTERVAL   (1 * 3 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 10 * CLOCK_SECOND)
 #else
-#define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 60 * CLOCK_SECOND)
 #endif
 #define UDP_PORT 1234
 
@@ -139,7 +139,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #if !WITH_ORPL_LB //the load balancing function included the calcul of the duty cycle
   simple_energest_start();
 #endif /*!WITH_ORPL_LB*/
- printf("App: %u starting\n", node_id);
+ //printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
   orpl_init(&global_ipaddr, node_id == ROOT_ID, 1);
@@ -152,7 +152,11 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #endif
     NETSTACK_RDC.off(1);
   } else {
+#if WITH_ORPL_LOADCTRL
     etimer_set(&periodic_timer, 2 * 60 * CLOCK_SECOND);
+#else
+    etimer_set(&periodic_timer, 10 * 60 * CLOCK_SECOND);
+#endif
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {

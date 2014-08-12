@@ -23,7 +23,7 @@
 #error UP_ONLY is not set
 #endif
 
-#define SEND_INTERVAL   (1 * 15 * CLOCK_SECOND)
+#define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
 #define UDP_PORT 1234
 
 static char buf[APP_PAYLOAD_LEN];
@@ -74,10 +74,16 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   static struct etimer periodic_timer;
   static struct etimer send_timer;
 
+  uip_ipaddr_t global_ipaddr;
   PROCESS_BEGIN();
 
   random_rand();
   simple_energest_start();
+
+
+
+  cc2420_set_txpower(RF_POWER);
+  cc2420_set_cca_threshold(RSSI_THR);
 
   if(node_id == 0) {
     NETSTACK_RDC.off(0);
@@ -89,15 +95,13 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   //  etimer_set(&periodic_timer, 90 * CLOCK_SECOND);
   //  PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
   printf("App: %u starting\n", node_id);
-
-  rpl_setup(node_id == ROOT_ID, node_id);
+  deployment_init(&global_ipaddr);
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
-
   if(node_id == ROOT_ID) {
     NETSTACK_RDC.off(1);
   } else {
-    etimer_set(&periodic_timer, 10 * 60 * CLOCK_SECOND);
+    etimer_set(&periodic_timer, 2 * 60 * CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {

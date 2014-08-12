@@ -1,4 +1,4 @@
-CONTIKI=/home/user/contiki-2.7
+CONTIKI=/home/macfly/contiki-2.7
 ORPL=..
 
 CONTIKI_PROJECT = app-collect-only app-down-only app-any-to-any

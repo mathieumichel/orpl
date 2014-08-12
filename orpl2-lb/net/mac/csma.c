@@ -397,7 +397,7 @@ send_packet(mac_callback_t sent, void *ptr)
      * so that the proper ORPL callback function can be called after transmission. */
     if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
     		&rimeaddr_null)) {
-#if COLLECT_ONLY
+#if 0//COLLECT_ONLY
       ORPL_LOG("Csma: send broadcast (%u bytes)\n", packetbuf_datalen());
 #endif
     	if(sending_routing_set) {
@@ -489,13 +489,14 @@ send_packet(mac_callback_t sent, void *ptr)
     PRINTF("csma: could not allocate packet, dropping packet\n");
 #if WITH_ORPL
 #if COLLECT_ONLY
-   ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate packet");
+    ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't alloc pkt");
+   //ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate packet");
 #endif
 #endif /* WITH_ORPL */
   } else {
     PRINTF("csma: could not allocate neighbor, dropping packet\n");
 #if WITH_ORPL
-#if COLLECT_ONLY
+#if 0// COLLECT_ONLY
    ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate neighbor");
 #endif
 #endif /* WITH_ORPL */

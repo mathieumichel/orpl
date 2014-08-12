@@ -264,10 +264,10 @@ update_metric_container(rpl_instance_t *instance)
   instance->mc.length = sizeof(instance->mc.obj.etx);
   instance->mc.obj.etx = path_metric;
 
-  PRINTF("RPL: My path ETX to the root is %u.%u\n",
-	instance->mc.obj.etx / RPL_DAG_MC_ETX_DIVISOR,
-	(instance->mc.obj.etx % RPL_DAG_MC_ETX_DIVISOR * 100) /
-	 RPL_DAG_MC_ETX_DIVISOR);
+  //PRINTF("RPL: My path ETX to the root is %u.%u\n",
+	//instance->mc.obj.etx / RPL_DAG_MC_ETX_DIVISOR,
+	//(instance->mc.obj.etx % RPL_DAG_MC_ETX_DIVISOR * 100) /
+	 //RPL_DAG_MC_ETX_DIVISOR);
 #elif RPL_DAG_MC == RPL_DAG_MC_ENERGY
   instance->mc.length = sizeof(instance->mc.obj.energy);
 

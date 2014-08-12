@@ -64,13 +64,14 @@ LIBS    = memb.c mmem.c timer.c list.c etimer.c ctimer.c energest.c rtimer.c sti
           print-stats.c ifft.c crc16.c random.c checkpoint.c ringbuf.c
 DEV     = nullradio.c
 NET     = netstack.c uip-debug.c packetbuf.c queuebuf.c packetqueue.c
-
+include $(CONTIKI)/core/net/Makefile.uip
+include $(CONTIKI)/core/net/rpl/Makefile.rpl
 ifdef UIP_CONF_IPV6
   CFLAGS += -DUIP_CONF_IPV6=1
   UIP   = uip6.c tcpip.c psock.c uip-udp-packet.c uip-split.c \
           resolv.c tcpdump.c uiplib.c simple-udp.c rpl-mrhof-qetx.c
   NET   += $(UIP) uip-icmp6.c uip-nd6.c uip-packetqueue.c \
-          sicslowpan.c neighbor-attr.c neighbor-info.c uip-ds6.c  uip-ds6-route.c
+          uip-ds6.c  uip-ds6-route.c
   ifneq ($(UIP_CONF_RPL),0)
     CFLAGS += -DUIP_CONF_IPV6_RPL=1
     include $(CONTIKI)/core/net/rpl/Makefile.rpl
@@ -95,7 +96,6 @@ CONTIKI_SOURCEFILES += $(CONTIKIFILES)
 
 CONTIKIDIRS_REL = dev lib net net/mac net/rime net/rpl sys cfs ctk lib/ctk loader tools .
 CONTIKIDIRS += ${addprefix $(CONTIKI)/core/, $(CONTIKIDIRS_REL) }
-COMMONDIRS += ${addprefix ../common/, $(CONTIKIDIRS_REL) }
 
 oname = ${patsubst %.c,%.o,${patsubst %.S,%.o,$(1)}}
 
@@ -148,7 +148,7 @@ CONTIKI_TARGET_DIRS_CONCAT = ${addprefix ${dir $(target_makefile)}, \
 CONTIKI_CPU_DIRS_CONCAT    = ${addprefix $(CONTIKI_CPU)/, \
                                $(CONTIKI_CPU_DIRS)}
 
-SOURCEDIRS = $(CONTIKIDIRS_REL) $(COMMONDIRS) $(PROJECTDIRS) $(CONTIKI_TARGET_DIRS_CONCAT) \
+SOURCEDIRS = $(CONTIKIDIRS_REL) $(PROJECTDIRS) $(CONTIKI_TARGET_DIRS_CONCAT) \
              $(CONTIKI_CPU_DIRS_CONCAT) $(CONTIKIDIRS) $(APPDIRS) ${dir $(target_makefile)}
 
 vpath %.c $(SOURCEDIRS)
