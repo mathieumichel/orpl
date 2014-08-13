@@ -43,10 +43,9 @@
 #include "net/rpl/rpl-private.h"
 #include "lib/random.h"
 #include "sys/ctimer.h"
+#include "tools/rpl-tools.h"
 
-#if UIP_CONF_IPV6
-
-#define DEBUG 1//DEBUG_NONE
+#define DEBUG DEBUG_NONE
 #include "net/uip-debug.h"
 
 /*---------------------------------------------------------------------------*/
@@ -148,6 +147,7 @@ handle_dio_timer(void *ptr)
 #if RPL_CONF_STATS
       instance->dio_totsend++;
 #endif /* RPL_CONF_STATS */
+      curr_dio_interval = instance->dio_intcurrent;
       dio_output(instance, NULL);
     } else {
       PRINTF("RPL: Supressing DIO transmission (%d >= %d)\n",
@@ -238,4 +238,3 @@ rpl_schedule_dao(rpl_instance_t *instance)
   }
 }
 /*---------------------------------------------------------------------------*/
-#endif /* UIP_CONF_IPV6 */

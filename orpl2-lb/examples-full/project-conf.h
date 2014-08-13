@@ -34,6 +34,8 @@
 #ifndef __PROJECT_CONF_H__
 #define __PROJECT_CONF_H__
 
+#define WITH_ORPL 1
+
 /* The IEEE 802.15.4 channel in use */
 #undef RF_CHANNEL
 #define RF_CHANNEL              15
@@ -74,10 +76,22 @@ typedef uint32_t rtimer_clock_t;
 #undef UIP_CONF_UDP_CHECKSUMS
 #define UIP_CONF_UDP_CHECKSUMS   0
 
-//#undef QUEUEBUF_CONF_NUM
-//#define QUEUEBUF_CONF_NUM 4
-
 #include "tools/orpl-log.h"
+
+#if WITH_ORPL
 #include "orpl-contiki-conf.h"
+#else
+#define RPL_CONF_INIT_LINK_METRIC 2
+#define RPL_CONF_MIN_HOPRANKINC 128
+/* Contiki netstack: RDC */
+#undef NETSTACK_CONF_RDC
+#define NETSTACK_CONF_RDC     contikimac_with_logs_driver
+#define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 1
+#undef RPL_CONF_MOP
+#define RPL_CONF_MOP RPL_MOP_NO_DOWNWARD_ROUTES
+/* Run without IPv6 NA/ND */
+#undef UIP_CONF_ND6_SEND_NA
+#define UIP_CONF_ND6_SEND_NA 0
+#endif /* WITH_ORPL */
 
 #endif /* __PROJECT_CONF_H__ */

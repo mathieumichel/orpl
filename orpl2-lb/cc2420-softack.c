@@ -42,7 +42,7 @@
 #endif
 
 #include "dev/leds.h"
-#include "dev/spi.h"
+#include "dev/spi.h"IFOP
 #include "dev/cc2420.h"
 #include "dev/cc2420_const.h"
 #include "cc2420-softack.h"
@@ -143,7 +143,7 @@ PROCESS(cc2420_process, "CC2420-softack driver");
     CC2420_SPI_DISABLE();                                    \
   } while(0)
 
-#define FIFOP_THRESHOLD 43
+#define FIFOP_THRESHOLD 44
 
 int cc2420_on(void);
 int cc2420_off(void);

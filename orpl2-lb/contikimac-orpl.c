@@ -79,7 +79,7 @@
 #define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.50 //0.45
+#define DUTY_CYCLE_TARGET   0.45
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
@@ -87,6 +87,7 @@
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
+uint32_t old_cycle=CONTIKIMAC_CONF_CYCLE_TIME;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
 #endif /*CONTIKIMAC_CONF_CYCLE_TIME*/
@@ -655,7 +656,7 @@ static void setLoadBalancing(int mode){
  */
 #if COLLECT_ONLY
 static void checkBalance(){
-  if(loadbalancing_is_on && cycle_time > (CONTIKIMAC_CONF_CYCLE_TIME + CONTIKIMAC_CONF_CYCLE_TIME / 2) && packet_count_prev >=50 && packet_count > packet_count_prev-10){
+  if(loadbalancing_is_on && cycle_time > (CONTIKIMAC_CONF_CYCLE_TIME + CONTIKIMAC_CONF_CYCLE_TIME / 2) && cycle_time > old_cycle && packet_count > packet_count_prev-packet_count_prev/10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
     setLoadBalancing(0);
   }
   ORPL_LOG(" (%u)",packet_count);
@@ -734,6 +735,7 @@ static void managecycle(void *ptr){
               temp_cycle=CYCLE_MIN;
             }
           }
+          old_cycle=cycle_time;
           cycle_time=temp_cycle;
         }
         ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
@@ -1535,12 +1537,7 @@ const struct rdc_driver contikimac_orpl_driver = {
   turn_off,
   duty_cycle,
 };
-/*---------------------------------------------------------------------------*/
-uint16_t
-contikimac_debug_print(void)
-{
-  return 0;
-}
+
 /*---------------------------------------------------------------------------*/
 
 #endif /* WITH_ORPL */

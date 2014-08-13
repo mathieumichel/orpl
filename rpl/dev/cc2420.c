@@ -52,6 +52,9 @@
 
 #include "sys/timetable.h"
 
+#define RSSI_THR -14
+//#define RSSI_THR 0
+
 #define WITH_SEND_CCA 1
 
 #define FOOTER_LEN 2
@@ -119,6 +122,8 @@ volatile uint16_t cc2420_sfd_start_time;
 volatile uint16_t cc2420_sfd_end_time;
 
 static volatile uint16_t last_packet_timestamp;
+uint32_t cc2420_count_incomming;
+
 /*---------------------------------------------------------------------------*/
 PROCESS(cc2420_process, "CC2420 driver");
 /*---------------------------------------------------------------------------*/
@@ -280,7 +285,7 @@ cc2420_init(void)
   uint16_t reg;
   {
     int s = splhigh();
-    cc2420_arch_init();		/* Initalize ports and SPI. */
+    cc2420_arch_init();   /* Initalize ports and SPI. */
     CC2420_DISABLE_FIFOP_INT();
     CC2420_FIFOP_INT_INIT();
     splx(s);
@@ -332,6 +337,10 @@ cc2420_init(void)
 
   cc2420_set_pan_addr(0xffff, 0x0000, NULL);
   cc2420_set_channel(26);
+
+  cc2420_set_txpower(RF_POWER);
+
+  cc2420_set_cca_threshold(-32 + RSSI_THR);
 
   flushrx();
 
@@ -400,11 +409,11 @@ cc2420_transmit(unsigned short payload_len)
         return RADIO_TX_COLLISION;
       }
       if(receive_on) {
-	ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
+  ENERGEST_OFF(ENERGEST_TYPE_LISTEN);
       }
       ENERGEST_ON(ENERGEST_TYPE_TRANSMIT);
       /* We wait until transmission has ended so that we get an
-	 accurate measurement of the transmission time.*/
+   accurate measurement of the transmission time.*/
       BUSYWAIT_UNTIL(!(status() & BV(CC2420_TX_ACTIVE)), RTIMER_SECOND / 10);
 
 #ifdef ENERGEST_CONF_LEVELDEVICE_LEVELS
@@ -412,11 +421,11 @@ cc2420_transmit(unsigned short payload_len)
 #endif
       ENERGEST_OFF(ENERGEST_TYPE_TRANSMIT);
       if(receive_on) {
-	ENERGEST_ON(ENERGEST_TYPE_LISTEN);
+  ENERGEST_ON(ENERGEST_TYPE_LISTEN);
       } else {
-	/* We need to explicitly turn off the radio,
-	 * since STXON[CCA] -> TX_ACTIVE -> RX_ACTIVE */
-	off();
+  /* We need to explicitly turn off the radio,
+   * since STXON[CCA] -> TX_ACTIVE -> RX_ACTIVE */
+  off();
       }
 
       if(packetbuf_attr(PACKETBUF_ATTR_RADIO_TXPOWER) > 0) {
@@ -644,9 +653,10 @@ PROCESS_THREAD(cc2420_process, ev, data)
     packetbuf_clear();
     packetbuf_set_attr(PACKETBUF_ATTR_TIMESTAMP, last_packet_timestamp);
     len = cc2420_read(packetbuf_dataptr(), PACKETBUF_SIZE);
-    
+
     packetbuf_set_datalen(len);
-    
+    cc2420_count_incomming++;
+
     NETSTACK_RDC.input();
 #if CC2420_TIMETABLE_PROFILING
     TIMETABLE_TIMESTAMP(cc2420_timetable, "end");
@@ -674,9 +684,9 @@ cc2420_read(void *buf, unsigned short bufsize)
   /*  if(!pending) {
     return 0;
     }*/
-  
+
   pending = 0;
-  
+
   GET_LOCK();
 
   cc2420_packets_read++;
@@ -714,7 +724,7 @@ cc2420_read(void *buf, unsigned short bufsize)
 #if CC2420_CONF_CHECKSUM
   if(checksum != crc16_data(buf, len - AUX_LEN, 0)) {
     PRINTF("checksum failed 0x%04x != 0x%04x\n",
-	   checksum, crc16_data(buf, len - AUX_LEN, 0));
+     checksum, crc16_data(buf, len - AUX_LEN, 0));
   }
 
   if(footer[1] & FOOTER1_CRC_OK &&

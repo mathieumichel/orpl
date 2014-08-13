@@ -75,6 +75,7 @@ void app_send_to(uint16_t id) {
   struct app_data data;
   uip_ipaddr_t dest_ipaddr;
 
+  data.magic = ORPL_LOG_MAGIC;
   data.seqno = ((uint32_t)node_id << 16) + cnt;
   data.src = node_id;
   data.dest = id;
@@ -136,7 +137,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
-  orpl_init(&global_ipaddr, node_id == ROOT_ID, 0);
+  orpl_init(node_id == ROOT_ID, 0);
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
 

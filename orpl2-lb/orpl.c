@@ -91,7 +91,7 @@ uint32_t orpl_broadcast_count = 0;
 #endif
 
 /* PRR threshold for considering a neighbor as usable */
-#define NEIGHBOR_PRR_THRESHOLD 50
+#define NEIGHBOR_PRR_THRESHOLD 30
 
 /* Rank changes of more than RANK_MAX_CHANGE trigger a trickle timer reset */
 #define RANK_MAX_CHANGE (2*EDC_DIVISOR)
@@ -147,6 +147,23 @@ static void broadcast_routing_set(void *ptr);
 /* Seqno of the next packet to be sent */
 static uint32_t current_seqno = 0;
 
+static init_done = 0;
+static clock_time_t init_time;
+
+void
+init_global_ipv6()
+{
+  if(!init_done) {
+    uip_ipaddr_t ipaddr;
+    if(get_global_addr(&ipaddr)) {
+      memcpy(&global_ipv6, &ipaddr, 16);
+      init_done = 1;
+      init_time = clock_seconds();
+    }
+  }
+}
+
+
 /* Set the 32-bit ORPL sequence number in packetbuf */
 void
 orpl_packetbuf_set_seqno(uint32_t seqno)
@@ -171,6 +188,18 @@ orpl_get_curr_seqno()
   current_seqno = 0; /* The app must set the seqno before next transmission */
   return ret;
 }
+
+
+/* Get a new ORPL sequence number */
+uint32_t
+orpl_get_new_seqno()
+{
+  while(current_seqno == 0) {
+    current_seqno = random_rand();
+  }
+  return current_seqno++;
+}
+
 
 /* Set the current ORPL sequence number before sending */
 void orpl_set_curr_seqno(uint32_t seqno)
@@ -199,18 +228,30 @@ global_ipaddr_from_llipaddr(uip_ipaddr_t *gipaddr, const uip_ipaddr_t *llipaddr)
   memcpy(gipaddr->u8+8, llipaddr->u8+8, 8);
 }
 
+static clock_time_t
+orpl_uptime()
+{
+  if(init_done) {
+    return clock_seconds() - init_time;
+  } else {
+    return 0;
+  }
+
+}
+
+
 /* Returns 1 if EDC is frozen, i.e. we are not allowed to change edc */
 int
 orpl_is_edc_frozen()
 {
-  return FREEZE_TOPOLOGY && orpl_up_only == 0 && clock_seconds() > UPDATE_EDC_MAX_TIME;
+  return FREEZE_TOPOLOGY && orpl_up_only == 0 && orpl_uptime() > UPDATE_EDC_MAX_TIME;
 }
 
 /* Returns 1 routing sets are active, i.e. we can start inserting and merging */
 int
 orpl_are_routing_set_active()
 {
-  return orpl_up_only == 0 && (FREEZE_TOPOLOGY || clock_seconds() > UPDATE_ROUTING_SET_MIN_TIME);
+  return orpl_up_only == 0 && !(FREEZE_TOPOLOGY && orpl_uptime() <= UPDATE_ROUTING_SET_MIN_TIME);
 }
 
 /* Returns 1 if the node is root of ORPL */
@@ -422,6 +463,9 @@ orpl_trickle_callback(rpl_instance_t *instance)
 {
   curr_instance = instance;
 
+  /* Needed after we have joing the DAG */
+  init_global_ipv6();
+
   if(orpl_are_routing_set_active()) {
 #if !FREEZE_TOPOLOGY
     /* Swap routing sets to implement ageing */
@@ -513,7 +557,7 @@ orpl_update_edc(rpl_rank_t edc)
 
 /* ORPL initialization */
 void
-orpl_init(const uip_ipaddr_t *ipaddr, int is_root, int up_only)
+orpl_init(int is_root, int up_only)
 {
   orpl_up_only = up_only;
   is_root_flag = is_root;
@@ -526,7 +570,7 @@ orpl_init(const uip_ipaddr_t *ipaddr, int is_root, int up_only)
   }
 
   /* Initialize global address */
-  memcpy(&global_ipv6, ipaddr, 16);
+  init_global_ipv6();
 
   /* Initialize routing set module */
   orpl_anycast_init();

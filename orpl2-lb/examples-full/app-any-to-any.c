@@ -112,6 +112,7 @@ app_send_to(uint16_t id, int ping, uint32_t seqno)
   struct app_data data;
   uip_ipaddr_t dest_ipaddr;
 
+  data.magic = ORPL_LOG_MAGIC;
   data.seqno = seqno;
   data.src = node_id;
   data.dest = id;
@@ -154,7 +155,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #endif
 
   deployment_init(&global_ipaddr);
-  orpl_init(&global_ipaddr, node_id == ROOT_ID, 0);
+  orpl_init(node_id == ROOT_ID, 0);
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
 
