@@ -7,7 +7,7 @@
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/collect-view</project>
   <project EXPORT="discard">[CONTIKI_DIR]/tools/cooja/apps/powertracker</project>
   <simulation>
-    <title>ORPL -- Down-only Application</title>
+    <title>ORPL -- Collect-only Application</title>
     <randomseed>123461</randomseed>
     <motedelay_us>1000000</motedelay_us>
     <radiomedium>
@@ -24,7 +24,7 @@
       se.sics.cooja.mspmote.SkyMoteType
       <identifier>sky1</identifier>
       <description>Sky Mote Type #sky1</description>
-      <firmware EXPORT="copy">[CONFIG_DIR]/app-down-only.sky</firmware>
+      <firmware EXPORT="copy">[CONFIG_DIR]/app-collect-only.sky</firmware>
       <moteinterface>se.sics.cooja.interfaces.Position</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.RimeAddress</moteinterface>
       <moteinterface>se.sics.cooja.interfaces.IPAddress</moteinterface>
@@ -157,8 +157,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>337.79808129110006</x>
-        <y>-27.431342169449398</y>
+        <x>327.3681133940832</x>
+        <y>68.57711763490165</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -171,8 +171,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>343.2560528518543</x>
-        <y>34.425668852432075</y>
+        <x>322.2158655415465</x>
+        <y>6.750143404461289</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -185,8 +185,8 @@
       <breakpoints />
       <interface_config>
         se.sics.cooja.interfaces.Position
-        <x>326.2756968850633</x>
-        <y>-89.28835319133087</y>
+        <x>323.68793635655703</x>
+        <y>-57.28493704849481</y>
         <z>0.0</z>
       </interface_config>
       <interface_config>
@@ -195,11 +195,67 @@
       </interface_config>
       <motetype_identifier>sky1</motetype_identifier>
     </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>317.79965309651504</x>
+        <y>-120.58398209394566</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>12</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>383.08900688874917</x>
+        <y>33.259981646261785</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>13</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>382.27717930140966</x>
+        <y>-21.944294292824477</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>14</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
+    <mote>
+      <breakpoints />
+      <interface_config>
+        se.sics.cooja.interfaces.Position
+        <x>379.02986895205163</x>
+        <y>-83.64319093062676</y>
+        <z>0.0</z>
+      </interface_config>
+      <interface_config>
+        se.sics.cooja.mspmote.interfaces.MspMoteID
+        <id>15</id>
+      </interface_config>
+      <motetype_identifier>sky1</motetype_identifier>
+    </mote>
   </simulation>
   <plugin>
     se.sics.cooja.plugins.SimControl
     <width>264</width>
-    <z>2</z>
+    <z>0</z>
     <height>203</height>
     <location_x>0</location_x>
     <location_y>0</location_y>
@@ -211,24 +267,23 @@
       <skin>se.sics.cooja.plugins.skins.AttributeVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.UDGMVisualizerSkin</skin>
       <skin>se.sics.cooja.plugins.skins.MoteTypeVisualizerSkin</skin>
-      <viewport>1.6489642534444193 0.0 0.0 1.6489642534444193 -160.0169609311361 189.23330266142455</viewport>
+      <viewport>1.2317886403407021 0.0 0.0 1.2317886403407021 9.115313075037829 164.0307324301945</viewport>
     </plugin_config>
-    <width>464</width>
-    <z>4</z>
-    <height>358</height>
+    <width>747</width>
+    <z>5</z>
+    <height>439</height>
     <location_x>6</location_x>
     <location_y>204</location_y>
   </plugin>
   <plugin>
     se.sics.cooja.plugins.LogListener
     <plugin_config>
-      <filter>Csma:!</filter>
-      <formatted_time />
+      <filter>App:</filter>
       <coloring />
     </plugin_config>
-    <width>711</width>
-    <z>3</z>
-    <height>537</height>
+    <width>572</width>
+    <z>4</z>
+    <height>504</height>
     <location_x>260</location_x>
     <location_y>3</location_y>
   </plugin>
@@ -246,13 +301,17 @@
       <mote>8</mote>
       <mote>9</mote>
       <mote>10</mote>
+      <mote>11</mote>
+      <mote>12</mote>
+      <mote>13</mote>
+      <mote>14</mote>
       <showRadioRXTX />
       <showRadioHW />
       <split>-1</split>
       <zoomfactor>44.83214771341773</zoomfactor>
     </plugin_config>
     <width>1297</width>
-    <z>5</z>
+    <z>3</z>
     <height>208</height>
     <location_x>7</location_x>
     <location_y>515</location_y>
@@ -264,7 +323,7 @@
       <analyzers name="6lowpan" />
     </plugin_config>
     <width>450</width>
-    <z>1</z>
+    <z>6</z>
     <height>511</height>
     <location_x>826</location_x>
     <location_y>-2</location_y>
@@ -279,19 +338,27 @@
  *  Mote mote, int id, String msg&#xD;
  */&#xD;
 &#xD;
-TIMEOUT(3600000);&#xD;
+TIMEOUT(300000);&#xD;
 &#xD;
 while (true) {&#xD;
   log.log(time + ":" + id + ":" + msg + "\n");&#xD;
   YIELD();&#xD;
 }</script>
-      <active>false</active>
+      <active>true</active>
     </plugin_config>
     <width>600</width>
-    <z>0</z>
+    <z>2</z>
     <height>700</height>
     <location_x>150</location_x>
     <location_y>150</location_y>
+  </plugin>
+  <plugin>
+    PowerTracker
+    <width>400</width>
+    <z>1</z>
+    <height>400</height>
+    <location_x>180</location_x>
+    <location_y>180</location_y>
   </plugin>
 </simconf>
 

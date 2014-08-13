@@ -51,20 +51,11 @@
 #include "lib/list.h"
 #include "lib/memb.h"
 
-#if WITH_ORPL_LOADCTRL
-#define CSMA_ADVANCED 1  //only for collect_only
-#else
-#define CSMA_ADVANCED 0
-extern uint8_t queuebuf_len;
-#endif
 #if WITH_ORPL
 #include "net/uip.h"
 #include "orpl.h"
 #include "orpl-anycast.h"
 #define UIP_IP_BUF ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#if COLLECT_ONLY
-uint16_t packet_count;
-#endif
 #endif /* WITH_ORPL */
 
 #include <string.h>
@@ -243,11 +234,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
     if(metadata != NULL) {
       sent = metadata->sent;
       cptr = metadata->cptr;
-#if CSMA_ADVANCED
-      num_tx = n->transmissions + n->collisions/8;
-#else
       num_tx = n->transmissions;
-#endif
       if(status == MAC_TX_COLLISION ||
          status == MAC_TX_NOACK) {
 
@@ -264,54 +251,26 @@ packet_sent(void *ptr, int status, int num_transmissions)
         default:
           PRINTF("csma: rexmit err %d, %d\n", status, n->transmissions);
         }
-#if CSMA_ADVANCED
-        if(status == MAC_TX_COLLISION) { //added by MF
-          time = default_timebase() / 2;
-        } else {
-          int i;
-          /* The retransmission time must be proportional to the channel
-           check interval of the underlying radio duty cycling layer. */
-          time = default_timebase() / 3;
 
-          /* The retransmission time uses a linear backoff so that the
+        /* The retransmission time must be proportional to the channel
+           check interval of the underlying radio duty cycling layer. */
+        time = default_timebase();
+
+        /* The retransmission time uses a linear backoff so that the
            interval between the transmissions increase with each
            retransmit. */
-          backoff_transmissions = 1;
-          for(i=0; i<num_tx-1; i++) {
-            backoff_transmissions *= 3;
-          }
+        backoff_transmissions = n->transmissions + 1;
 
-          /* Clamp the number of backoffs so that we don't get a too long
+        /* Clamp the number of backoffs so that we don't get a too long
            timeout here, since that will delay all packets in the
            queue. */
-          if(backoff_transmissions > 3 * 3) {
-            backoff_transmissions = 3 * 3;
-          }
-
-          time = default_timebase() + (random_rand() % (backoff_transmissions * time));
+        if(backoff_transmissions > 3) {
+          backoff_transmissions = 3;
         }
-        if(num_tx < metadata->max_transmissions) {
-#else
-            /* The retransmission time must be proportional to the channel
-                       check interval of the underlying radio duty cycling layer. */
-            time = default_timebase();
 
-            /* The retransmission time uses a linear backoff so that the
-                       interval between the transmissions increase with each
-                       retransmit. */
-            backoff_transmissions = n->transmissions + 1;
+        time = time + (random_rand() % (backoff_transmissions * time));
 
-            /* Clamp the number of backoffs so that we don't get a too long
-                       timeout here, since that will delay all packets in the
-                       queue. */
-            if(backoff_transmissions > 3) {
-              backoff_transmissions = 3;
-            }
-
-            time = time + (random_rand() % (backoff_transmissions * time));
-
-            if(n->transmissions < metadata->max_transmissions) {
-#endif
+        if(n->transmissions < metadata->max_transmissions) {
           PRINTF("csma: retransmitting with time %lu %p\n", time, q);
           ctimer_set(&n->transmit_timer, time,
                      transmit_packet_list, n);
@@ -322,29 +281,23 @@ packet_sent(void *ptr, int status, int num_transmissions)
 #if WITH_ORPL
           /* Failed downwards transmission. Trigger false positive recovery. */
         	if(ORPL_WITH_FP_RECOVERY && !orpl_is_root() && packetbuf_attr(PACKETBUF_ATTR_ORPL_DIRECTION) == direction_down) {
-        		//ORPL_LOG_FROM_PACKETBUF("Csma:! triggering fp recovery %u after %d tx, %d c.",
-        		    //ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
-#if !COLLECT_ONLY
-        		free_packet(n, q);
-        		/* GIve another try, upwards this time, after inserting in blacklist. */
-        		orpl_blacklist_insert(orpl_packetbuf_seqno());
-        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
-        		ORPL_LOG_FROM_PACKETBUF("Tcpip: fp recovery");
-        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
-        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
-        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
-        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
-        		NETSTACK_MAC.send(sent, cptr);
-#endif
+//        		ORPL_LOG_FROM_PACKETBUF("Csma:! triggering false positive recovery %u after %d tx, %d c.",
+  //      		    ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
+//        		free_packet(n, q);
+//        		/* GIve another try, upwards this time, after inserting in blacklist. */
+//        		orpl_blacklist_insert(orpl_packetbuf_seqno());
+//        		ORPL_LOG_INC_FPCOUNT_FROM_PACKETBUF();
+//        		ORPL_LOG_FROM_PACKETBUF("Tcpip: false positive recovery");
+//        		packetbuf_set_attr(PACKETBUF_ATTR_PENDING, 0);
+//        		packetbuf_set_attr(PACKETBUF_ATTR_ORPL_DIRECTION, direction_recover);
+//        		packetbuf_set_attr(PACKETBUF_ATTR_MAX_MAC_TRANSMISSIONS, SICSLOWPAN_CONF_MAX_MAC_TRANSMISSIONS);
+//        		packetbuf_set_addr(PACKETBUF_ADDR_RECEIVER, &anycast_addr_recover);
+//        		NETSTACK_MAC.send(sent, cptr);
         	} else {
         	  ORPL_LOG_FROM_PACKETBUF("Csma:! dropping %u after %d tx, %d collisions",
         	      ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
         	  PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
         	      status, n->transmissions, n->collisions);
-#if COLLECT_ONLY
-            packet_count+=1;
-#endif
-            packetbuf_set_attr(PACKETBUF_ATTR_EDC, 0xffff);//MF-BUG
         	  free_packet(n, q);
         	  mac_call_sent_callback(sent, cptr, status, num_tx);
         	}
@@ -362,9 +315,6 @@ packet_sent(void *ptr, int status, int num_transmissions)
                                  &rimeaddr_null)) {
             ORPL_LOG_FROM_PACKETBUF("Csma: success %u after %d tx, %d collisions",
                 ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER)), n->transmissions, n->collisions);
-#if COLLECT_ONLY
-            packet_count+=1;
-#endif
           }
 #endif /* WITH_ORPL */
           PRINTF("csma: rexmit ok %d\n", n->transmissions);
@@ -387,7 +337,7 @@ send_packet(mac_callback_t sent, void *ptr)
   struct rdc_buf_list *q;
   struct neighbor_queue *n;
   static uint16_t seqno;
- //ORPL_LOG("Queue : %u\n",queuebuf_len);
+
 #if WITH_ORPL
     /* Using packetbuf address would lead to a single queue for all anycasts.
        * We use the IPv6 UUID to have one queue per destination instead. */
@@ -397,9 +347,7 @@ send_packet(mac_callback_t sent, void *ptr)
      * so that the proper ORPL callback function can be called after transmission. */
     if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
     		&rimeaddr_null)) {
-#if 0//COLLECT_ONLY
-      ORPL_LOG("Csma: send broadcast (%u bytes)\n", packetbuf_datalen());
-#endif
+    	ORPL_LOG("Csma: send broadcast (%u bytes)\n", packetbuf_datalen());
     	if(sending_routing_set) {
     		packetbuf_set_attr(PACKETBUF_ATTR_ROUTING_SET, 1);
     	}
@@ -488,17 +436,12 @@ send_packet(mac_callback_t sent, void *ptr)
     }
     PRINTF("csma: could not allocate packet, dropping packet\n");
 #if WITH_ORPL
-#if COLLECT_ONLY
-    ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't alloc pkt");
-   //ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate packet");
-#endif
+    ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate packet");
 #endif /* WITH_ORPL */
   } else {
     PRINTF("csma: could not allocate neighbor, dropping packet\n");
 #if WITH_ORPL
-#if 0// COLLECT_ONLY
-   ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate neighbor");
-#endif
+    ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate neighbor");
 #endif /* WITH_ORPL */
   }
   mac_call_sent_callback(sent, ptr, MAC_TX_ERR, 1);
