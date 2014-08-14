@@ -54,7 +54,7 @@
 #if WITH_ORPL_LOADCTRL
 #define CSMA_ADVANCED 1  //only for collect_only
 #else
-#define CSMA_ADVANCED 0
+#define CSMA_ADVANCED 1
 extern uint8_t queuebuf_len;
 #endif
 #if WITH_ORPL
@@ -488,7 +488,7 @@ send_packet(mac_callback_t sent, void *ptr)
     }
     PRINTF("csma: could not allocate packet, dropping packet\n");
 #if WITH_ORPL
-#if COLLECT_ONLY
+#if 0 //COLLECT_ONLY
     ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't alloc pkt");
    //ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate packet");
 #endif

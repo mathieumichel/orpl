@@ -40,7 +40,6 @@
 /* Used to identify packets carrying ORPL log */
 #define ORPL_LOG_MAGIC 0xcafebabe
 
-
 /* Data structure copied at the end of all data packets, making it possible
  * to trace packets at every hop, from every layer. */
 struct app_data {
@@ -68,7 +67,8 @@ uint16_t log_node_id_from_rimeaddr(const void *rimeaddr);
 uint16_t log_node_id_from_ipaddr(const void *ipaddr);
 /* Prints out the content of the active routing set */
 void orpl_log_print_routing_set();
-
+/* Starts logging process */
+void orpl_log_start();
 
 #define ORPL_LOG(...) printf(__VA_ARGS__)
 #define ORPL_LOG_FROM_APPDATAPTR(appdataptr, ...) { printf(__VA_ARGS__); log_appdataptr(appdataptr); }
@@ -82,4 +82,5 @@ void orpl_log_print_routing_set();
 
 #define ORPL_LOG_NODEID_FROM_RIMEADDR log_node_id_from_rimeaddr
 #define ORPL_LOG_NODEID_FROM_IPADDR log_node_id_from_ipaddr
+
 #endif /* ORPL_LOG */

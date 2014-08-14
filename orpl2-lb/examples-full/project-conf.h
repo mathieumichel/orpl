@@ -63,7 +63,7 @@ typedef uint32_t rtimer_clock_t;
 #define UIP_CONF_TCP             0
 #undef SICSLOWPAN_CONF_FRAG
 #define SICSLOWPAN_CONF_FRAG     0
-#undef SICSLOWPAN_CONF_FRAG
+#undef UIP_CONF_DS6_ADDR_NBU
 #define UIP_CONF_DS6_ADDR_NBU    1
 #undef UIP_CONF_BUFFER_SIZE
 #define UIP_CONF_BUFFER_SIZE   160
@@ -81,17 +81,25 @@ typedef uint32_t rtimer_clock_t;
 #if WITH_ORPL
 #include "orpl-contiki-conf.h"
 #else
+/* Makes RPL more reactive */
 #define RPL_CONF_INIT_LINK_METRIC 2
+/* To equal RPL_DAG_MC_ETX_DIVISOR */
 #define RPL_CONF_MIN_HOPRANKINC 128
-/* Contiki netstack: RDC */
+/* Use Contikimac implementation with logs (and extended guard times) */
 #undef NETSTACK_CONF_RDC
 #define NETSTACK_CONF_RDC     contikimac_with_logs_driver
+/* Use Contikimac phase lock */
 #define CONTIKIMAC_CONF_WITH_PHASE_OPTIMIZATION 1
+/* RPL without downward routes. Modify if you need more than upward-only. */
 #undef RPL_CONF_MOP
-#define RPL_CONF_MOP RPL_MOP_NO_DOWNWARD_ROUTES
+#define RPL_CONF_MOP RPL_MOP_NO_DOWNWARD_ROUTES  //collect-only
+//#define RPL_CONF_MOP RPL_MOP_STORING_NO_MULTICAST  //any-to-any
 /* Run without IPv6 NA/ND */
 #undef UIP_CONF_ND6_SEND_NA
 #define UIP_CONF_ND6_SEND_NA 0
+/* Disable DIS sending */
+#undef RPL_DIS_SEND_CONF
+#define RPL_DIS_SEND_CONF 0
 #endif /* WITH_ORPL */
 
 #endif /* __PROJECT_CONF_H__ */

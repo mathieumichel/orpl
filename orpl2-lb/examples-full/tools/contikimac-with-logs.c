@@ -349,7 +349,7 @@ powercycle_turn_radio_off(void)
 #if CONTIKIMAC_CONF_COMPOWER
   uint8_t was_on = radio_is_on;
 #endif /* CONTIKIMAC_CONF_COMPOWER */
-
+  
   if(we_are_sending == 0 && we_are_receiving_burst == 0) {
     off();
 #if CONTIKIMAC_CONF_COMPOWER
@@ -490,9 +490,9 @@ powercycle(struct rtimer *t, void *ptr)
 
     if(RTIMER_CLOCK_LT(RTIMER_NOW() - cycle_start, CYCLE_TIME - CHECK_TIME * 4)) {
       /* Schedule the next powercycle interrupt, or sleep the mcu
-   until then.  Sleeping will not exit from this interrupt, so
-   ensure an occasional wake cycle or foreground processing will
-   be blocked until a packet is detected */
+	 until then.  Sleeping will not exit from this interrupt, so
+	 ensure an occasional wake cycle or foreground processing will
+	 be blocked until a packet is detected */
 #if RDC_CONF_MCU_SLEEP
       static uint8_t sleepcycle;
       if((sleepcycle++ < 16) && !we_are_sending && !radio_is_on) {
@@ -535,7 +535,7 @@ broadcast_rate_drop(void)
 /*---------------------------------------------------------------------------*/
 static int
 send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
-      struct rdc_buf_list *buf_list,
+	    struct rdc_buf_list *buf_list,
             int is_receiver_awake)
 {
   rtimer_clock_t t0;
@@ -560,7 +560,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     PRINTF("contikimac: radio is turned off\n");
     return MAC_TX_ERR_FATAL;
   }
-
+ 
   if(packetbuf_totlen() == 0) {
     PRINTF("contikimac: send_packet data len 0\n");
     return MAC_TX_ERR_FATAL;
@@ -609,7 +609,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
   chdr = packetbuf_hdrptr();
   chdr->id = CONTIKIMAC_ID;
   chdr->len = hdrlen;
-
+  
   /* Create the MAC header for the data packet. */
   hdrlen = NETSTACK_FRAMER.create();
   if(hdrlen < 0) {
@@ -667,9 +667,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     if(ret != PHASE_UNKNOWN) {
       is_known_receiver = 1;
     }
-#endif /* WITH_PHASE_OPTIMIZATION */
+#endif /* WITH_PHASE_OPTIMIZATION */ 
   }
-
+  
 
 
   /* By setting we_are_sending to one, we ensure that the rtimer
@@ -687,7 +687,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
            NETSTACK_RADIO.receiving_packet(), NETSTACK_RADIO.pending_packet());
     return MAC_TX_COLLISION;
   }
-
+  
   /* Switch off the radio to ensure that we didn't start sending while
      the radio was doing a channel check. */
   off();
@@ -773,7 +773,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 
 #if RDC_CONF_HARDWARE_ACK
      /* For radios that block in the transmit routine and detect the
-  ACK in hardware */
+	ACK in hardware */
       if(ret == RADIO_TX_OK) {
         if(!is_broadcast) {
           got_strobe_ack = 1;
@@ -804,9 +804,9 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
           got_strobe_ack = 1;
           encounter_time = txtime;
           break;
-        } else {
-          PRINTF("contikimac: collisions while sending\n");
-          collisions++;
+//        } else {
+//          PRINTF("contikimac: collisions while sending\n");
+//          collisions++;
         }
       }
 #endif /* RDC_CONF_HARDWARE_ACK */
@@ -845,7 +845,8 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
      function. We must pass this value to the phase module before we
      return from the function.  */
   if(collisions > 0) {
-    ret = MAC_TX_COLLISION;
+    //ret = MAC_TX_COLLISION;
+    ret = MAC_TX_NOACK; /* This is a collisions while sending, count it as noack */
   } else if(!is_broadcast && !got_strobe_ack) {
     ret = MAC_TX_NOACK;
   } else {
@@ -855,14 +856,14 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
 #if WITH_PHASE_OPTIMIZATION
   if(is_known_receiver && got_strobe_ack) {
     PRINTF("no miss %d wake-ups %d\n",
-     packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0],
+	   packetbuf_addr(PACKETBUF_ADDR_RECEIVER)->u8[0],
            strobes);
   }
 
   if(!is_broadcast) {
     if(collisions == 0 && is_receiver_awake == 0) {
       phase_update(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-       encounter_time, ret);
+		   encounter_time, ret);
     }
   }
 #endif /* WITH_PHASE_OPTIMIZATION */
@@ -894,7 +895,7 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
   struct rdc_buf_list *next;
   int ret;
   int is_receiver_awake;
-
+  
   if(curr == NULL) {
     return;
   }
@@ -987,7 +988,7 @@ input_packet(void)
       if(we_are_receiving_burst) {
         on();
         /* Set a timer to turn the radio off in case we do not receive
-     a next packet */
+	   a next packet */
         ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
       } else {
         off();
@@ -1030,9 +1031,9 @@ input_packet(void)
       compower_clear(&current_packet);
 #endif /* CONTIKIMAC_CONF_COMPOWER */
 
-      if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
-          &rimeaddr_node_addr)) { /* if unicast */
-
+ //     if(rimeaddr_cmp(packetbuf_addr(PACKETBUF_ADDR_RECEIVER),
+ //         &rimeaddr_node_addr)) { /* if unicast */
+      if(appdataptr_from_packetbuf() != NULL) { /* If application packet */
         ORPL_LOG_INC_HOPCOUNT_FROM_PACKETBUF();
                 ORPL_LOG_FROM_PACKETBUF("Cmac: input from %d",
                     ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER))

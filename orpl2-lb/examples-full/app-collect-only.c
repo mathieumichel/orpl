@@ -39,6 +39,7 @@
 #include "contiki-conf.h"
 #include "lib/random.h"
 #include "orpl.h"
+#include "net/rpl/rpl-private.h"
 #include "deployment.h"
 #include "simple-energest.h"
 #include "simple-udp.h"
@@ -55,7 +56,7 @@ static uint16_t compteur=2;
 #if WITH_ORPL_LOADCTRL
 #define SEND_INTERVAL   (1 * 10 * CLOCK_SECOND)
 #else
-#define SEND_INTERVAL   (4 * 60 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 60 * CLOCK_SECOND)
 #endif
 #define UDP_PORT 1234
 
@@ -137,13 +138,17 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 
   cc2420_set_txpower(RF_POWER);
   cc2420_set_cca_threshold(RSSI_THR);
+  orpl_log_start();
+  
 #if !WITH_ORPL_LB //the load balancing function included the calcul of the duty cycle
   simple_energest_start();
 #endif /*!WITH_ORPL_LB*/
  //printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
+#if WITH_ORPL
   orpl_init(node_id == ROOT_ID, 1);
+#endif /* WITH_ORPL */
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
 
@@ -186,7 +191,8 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
       else{
         etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
         PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-        if(orpl_current_edc() != 0xffff) {
+        if(default_instance != NULL) {
+        
           app_send_to(ROOT_ID);
         } else {
           printf("App: not in DODAG\n");
@@ -195,11 +201,13 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #else
       etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
       PROCESS_WAIT_UNTIL(etimer_expired(&send_timer));
-      if(orpl_current_edc() != 0xffff) {
+       
+       if(default_instance != NULL) {
         app_send_to(ROOT_ID);
-      } else {
-        //printf("App: not in DODAG\n");
+//      } else {
+//        printf("App: not in DODAG\n");
       }
+ 	
 #endif
       PROCESS_WAIT_UNTIL(etimer_expired(&periodic_timer));
       etimer_reset(&periodic_timer);
