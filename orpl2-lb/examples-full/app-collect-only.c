@@ -204,9 +204,9 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
        
        if(default_instance != NULL) {
         app_send_to(ROOT_ID);
-//      } else {
-//        printf("App: not in DODAG\n");
-      }
+      } //else {
+       // printf("App: not in DODAG\n");
+      //}
  	
 #endif
       PROCESS_WAIT_UNTIL(etimer_expired(&periodic_timer));

@@ -344,7 +344,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
 #if COLLECT_ONLY
             packet_count+=1;
 #endif
-            packetbuf_set_attr(PACKETBUF_ATTR_EDC, 0xffff);//MF-BUG
+            //packetbuf_set_attr(PACKETBUF_ATTR_EDC, 0xffff);//MF-BUG
         	  free_packet(n, q);
         	  mac_call_sent_callback(sent, cptr, status, num_tx);
         	}
