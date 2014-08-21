@@ -87,7 +87,6 @@
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-uint32_t old_cycle=CONTIKIMAC_CONF_CYCLE_TIME;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
 #endif /*CONTIKIMAC_CONF_CYCLE_TIME*/
@@ -656,7 +655,7 @@ static void setLoadBalancing(int mode){
  */
 #if COLLECT_ONLY
 static void checkBalance(){
-  if(loadbalancing_is_on && cycle_time > (CONTIKIMAC_CONF_CYCLE_TIME + CONTIKIMAC_CONF_CYCLE_TIME / 2) && packet_count_prev >=50 && packet_count > packet_count_prev-10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
+  if(loadbalancing_is_on && cycle_time >= CYCLE_MAX) && packet_count_prev >=100 && packet_count > packet_count_prev/2){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
     setLoadBalancing(0);
   }
   ORPL_LOG(" (%u)",packet_count);
@@ -735,7 +734,6 @@ static void managecycle(void *ptr){
               temp_cycle=CYCLE_MIN;
             }
           }
-          old_cycle=cycle_time;
           cycle_time=temp_cycle;
         }
         ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
