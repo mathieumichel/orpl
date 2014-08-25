@@ -56,7 +56,7 @@ static uint16_t compteur=2;
 #if WITH_ORPL_LOADCTRL
 #define SEND_INTERVAL   (1 * 10 * CLOCK_SECOND)
 #else
-#define SEND_INTERVAL   (1 * 60 * CLOCK_SECOND)
+#define SEND_INTERVAL   (2 * 60 * CLOCK_SECOND)
 #endif
 #define UDP_PORT 1234
 

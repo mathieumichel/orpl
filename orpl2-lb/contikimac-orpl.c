@@ -79,7 +79,7 @@
 #define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.85
+#define DUTY_CYCLE_TARGET   0.75
 #define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
@@ -655,7 +655,7 @@ static void setLoadBalancing(int mode){
  */
 #if COLLECT_ONLY
 static void checkBalance(){
-  if(loadbalancing_is_on && cycle_time >= CYCLE_MAX) && packet_count_prev >=100 && packet_count > packet_count_prev/2){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
+  if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
     setLoadBalancing(0);
   }
   ORPL_LOG(" (%u)",packet_count);
