@@ -80,7 +80,7 @@
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.75
-#define CYCLE_STEP_MAX (CYCLE_TIME / 2 )//we don't want to move too fast
+#define CYCLE_STEP_MAX (CYCLE_TIME / 4)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
 #define HYSTERESIS 5 // 0.05

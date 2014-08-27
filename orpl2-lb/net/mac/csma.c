@@ -488,7 +488,7 @@ send_packet(mac_callback_t sent, void *ptr)
     }
     PRINTF("csma: could not allocate packet, dropping packet\n");
 #if WITH_ORPL
-#if 0 //COLLECT_ONLY
+#if 1 //COLLECT_ONLY
     ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't alloc pkt");
    //ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate packet");
 #endif
@@ -496,7 +496,7 @@ send_packet(mac_callback_t sent, void *ptr)
   } else {
     PRINTF("csma: could not allocate neighbor, dropping packet\n");
 #if WITH_ORPL
-#if 0// COLLECT_ONLY
+#if 1// COLLECT_ONLY
    ORPL_LOG_FROM_PACKETBUF("Csma:! couldn't allocate neighbor");
 #endif
 #endif /* WITH_ORPL */

@@ -1,5 +1,5 @@
 /**
- * \addtogroup uip6
+  * \addtogroup uip6
  * @{
  */
 /*
@@ -195,7 +195,7 @@ handle_dio_timer(void *ptr)
         prev=dc_obj_metric;
       }
       else{//starting case
-        dio_dc_objective=dc_min+(dc_max-dc_min)/2;
+        dio_dc_objective=100;//dc_min+(dc_max-dc_min)/2;
         prev=dio_dc_objective;
       }
     }
