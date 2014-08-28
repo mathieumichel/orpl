@@ -76,7 +76,7 @@
 #include "orpl-log.h"
 
 #define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.75
@@ -649,21 +649,6 @@ static void setLoadBalancing(int mode){
   }
   ctimer_stop(&ct_guard);//disable the guard timer
 }
-/**
- * check is the load balancing is effective,
- * if not (for example the node cannot reduce its load) disable the mechanism
- */
-#if COLLECT_ONLY
-static void checkBalance(){
-  if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
-    setLoadBalancing(0);
-  }
-  ORPL_LOG(" (%u)",packet_count);
-  packet_count_prev=packet_count;
-  packet_count=0;
-
-}
-#endif
 
 static void managecycle(void *ptr){
   if(contikimac_is_on)
@@ -681,30 +666,28 @@ static void managecycle(void *ptr){
     last_time = curr_time;
 
 
-      periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
-#if WITH_ORPL_LB_DIO_TARGET
-      periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
-#endif
+    periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
+
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
-      if(dio_dc_objective==0){
-        objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
-      }
-      else{
-        objective_dc=dio_dc_objective;
-      }
-#else /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
+    if(dio_dc_objective==0){
       objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
+    }
+    else{
+      objective_dc=dio_dc_objective;
+    }
+    periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
+#else /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
+    objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
 #endif /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
 
 
-      if(weighted_dc==0){
-        weighted_dc=objective_dc;
-        //weighted_dc=periodic_dc;
-      }
+    if(weighted_dc==0){
+      weighted_dc=objective_dc;
+      //weighted_dc=periodic_dc;
+    }
 
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
 
-      uint8_t exclusion=0;
       ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
       if(loadbalancing_is_on){
         if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
@@ -736,18 +719,18 @@ static void managecycle(void *ptr){
           }
           cycle_time=temp_cycle;
         }
-        ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
-
     }
-    else{
-      ORPL_LOG("-> F");
-    }
+    ORPL_LOG(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
 #if COLLECT_ONLY
     if((cpt+3)%4==0){//every 4 LB_data periods after initialisation we check the network load
-      checkBalance();
+      if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
+        setLoadBalancing(0);
+        ORPL_LOG("LB off (%u-%u)\n",packet_count,packet_count_prev);
+      }
+      packet_count_prev=packet_count;
+      packet_count=0;
     }
 #endif
-    ORPL_LOG("\n");
 
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,

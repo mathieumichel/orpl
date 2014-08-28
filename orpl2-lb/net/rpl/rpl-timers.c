@@ -47,9 +47,9 @@
 #include "orpl.h"
 #endif /* WITH_ORPL */
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
-uint16_t wu_target=500;
-uint8_t dc_min=30;//0.30
-uint8_t dc_max=100;//1.00
+//uint16_t wu_target=500;
+//uint8_t dc_min=30;//0.30
+//uint8_t dc_max=100;//1.00
 uint8_t dc_fixed=0;
 uint16_t prev;
 extern uint32_t dc_obj_metric;
@@ -195,7 +195,7 @@ handle_dio_timer(void *ptr)
         prev=dc_obj_metric;
       }
       else{//starting case
-        dio_dc_objective=100;//dc_min+(dc_max-dc_min)/2;
+        dio_dc_objective=80;//dc_min+(dc_max-dc_min)/2;
         prev=dio_dc_objective;
       }
     }
