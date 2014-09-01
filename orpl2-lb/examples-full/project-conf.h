@@ -35,7 +35,7 @@
 #define __PROJECT_CONF_H__
 
 #define WITH_ORPL 1
-
+#define COLLECT_ONLY 1 //used for adapt logging to require less memory
 /* The IEEE 802.15.4 channel in use */
 #undef RF_CHANNEL
 #define RF_CHANNEL              15

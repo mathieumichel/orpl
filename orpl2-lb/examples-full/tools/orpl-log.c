@@ -206,7 +206,9 @@ PROCESS_THREAD(orpl_log_process, ev, data)
   static struct etimer periodic;
   PROCESS_BEGIN();
   etimer_set(&periodic, 60 * CLOCK_SECOND);
+#if !WITH_ORPL_LB //the load balancing function included the calcul of the duty cycle
   simple_energest_start();
+#endif /*!WITH_ORPL_LB*/
 
   while(1) {
     static int cnt = 0;
@@ -214,8 +216,9 @@ PROCESS_THREAD(orpl_log_process, ev, data)
 
     PROCESS_WAIT_UNTIL(etimer_expired(&periodic));
     etimer_reset(&periodic);
+#if !WITH_ORPL_LB
     simple_energest_step();
-
+#endif /*!WITH_ORPL_LB*/
 #if WITH_ORPL
     /* Periodic debugging of ORPL EDC calculation */
     orpl_calculate_edc(1);

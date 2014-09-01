@@ -75,15 +75,23 @@
 #include "deployment.h"
 #include "orpl-log.h"
 
-#define LB_DATAPERIOD 4*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_DATAPERIOD 1*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
+#define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.75
 #define CYCLE_STEP_MAX (CYCLE_TIME / 4)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
 #define DC_ALPHA 0.25
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define HYSTERESIS 5 // 0.05
+#define HYSTERESIS 0 // 0.05
+
+
+#define WITH_ENERGY_THRESHOLD 1
+#if WITH_ENERGY_THRESHOLD
+static uint32_t total_dc_spent;
+extern uint8_t dead;//use to signal at the app that the node is down
+#define ENERGY_THRESHOLD 7000 //when the total duty-cycle-spent is higher than this thrshold the node dies
+#endif /* WITH_ENERGY_THRESHOLD */
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
@@ -94,6 +102,7 @@ static struct ctimer ct_check;//timer used to manage the cycle
 static struct ctimer ct_guard; //timer used for the guard_time
 static uint32_t last_tx, last_rx, last_time;
 static uint32_t curr_tx, curr_rx, curr_time;
+
 static uint32_t delta_tx, delta_rx, delta_time;
 #if COLLECT_ONLY
 extern uint16_t packet_count;
@@ -637,19 +646,18 @@ powercycle(struct rtimer *t, void *ptr)
 static void setLoadBalancing(int mode){
   loadbalancing_is_on=mode;
   if(loadbalancing_is_on){
-    ORPL_LOG("LB ON\n");
+    ORPL_LOG("ORPL_LB ON\n");
 #if CHANGE_STROBE_TIME
       default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
 #endif
   }
   else{
-    //ORPL_LOG("LB OFF\n");
+    ORPL_LOG("ORPL_LB OFF\n");
     //default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
     cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
   }
   ctimer_stop(&ct_guard);//disable the guard timer
 }
-
 static void managecycle(void *ptr){
   if(contikimac_is_on)
   {
@@ -664,6 +672,18 @@ static void managecycle(void *ptr){
     last_tx = curr_tx;
     last_rx = curr_rx;
     last_time = curr_time;
+
+#if WITH_ENERGY_THRESHOLD
+    total_dc_spent=total_dc_spent+(curr_tx+curr_rx)/1000ul;
+    ORPL_LOG("ORPL_LB: energy : %lu-%lu\n",total_dc_spent, curr_tx+curr_rx );
+    if(total_dc_spent > ENERGY_THRESHOLD){
+      NETSTACK_RDC.off(0);//don't keep the radio on
+      NETSTACK_MAC.off(0);
+      ORPL_LOG("ORPL_LB: DEAD!!!!!!!!!\n");
+      dead=1;
+      return;
+    }
+#endif /* WITH_ENERGY_THRESHOLD */
 
 
     periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
@@ -688,7 +708,7 @@ static void managecycle(void *ptr){
 
       weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
 
-      ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
+      ORPL_LOG("ORPL_LB: DC : %u - %u",periodic_dc,weighted_dc);
       if(loadbalancing_is_on){
         if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
           uint32_t temp_cycle;
@@ -721,11 +741,11 @@ static void managecycle(void *ptr){
         }
     }
     ORPL_LOG(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
-#if COLLECT_ONLY
+#if 0//COLLECT_ONLY
     if((cpt+3)%4==0){//every 4 LB_data periods after initialisation we check the network load
       if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
         setLoadBalancing(0);
-        ORPL_LOG("LB off (%u-%u)\n",packet_count,packet_count_prev);
+        ORPL_LOG("LB check(%u-%u)\n",packet_count,packet_count_prev);
       }
       packet_count_prev=packet_count;
       packet_count=0;

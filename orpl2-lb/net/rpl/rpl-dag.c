@@ -308,12 +308,15 @@ rpl_set_root(uint8_t instance_id, uip_ipaddr_t *dag_id)
 
   dag->rank = ROOT_RANK(instance);
 
+#if !WITH_ORPL
   if(instance->current_dag != dag && instance->current_dag != NULL) {
     /* Remove routes installed by DAOs. */
     rpl_remove_routes(instance->current_dag);
 
     instance->current_dag->joined = 0;
   }
+#endif /* !WITH_ORPL */
+
 
   instance->current_dag = dag;
   instance->dtsn_out = RPL_LOLLIPOP_INIT;
@@ -546,8 +549,10 @@ rpl_free_dag(rpl_dag_t *dag)
     PRINTF("\n");
     dag->joined = 0;
 
+#if !WITH_ORPL
     /* Remove routes installed by DAOs. */
     rpl_remove_routes(dag);
+#endif /* !WITH_ORPL */
 
    /* Remove autoconfigured address */
     if((dag->prefix_info.flags & UIP_ND6_RA_FLAG_AUTONOMOUS)) {
@@ -715,7 +720,9 @@ We just update the rank and return the DAG. */
       }
       /* The DAO parent set changed - schedule a DAO transmission. */
       RPL_LOLLIPOP_INCREMENT(instance->dtsn_out);
+#if !WITH_ORPL
       rpl_schedule_dao(instance);
+#endif /* !WITH_ORPL */
     }
     rpl_reset_dio_timer(instance);
   } else if(best_dag->rank != old_rank) {
@@ -956,11 +963,13 @@ rpl_join_instance(uip_ipaddr_t *from, rpl_dio_t *dio)
   rpl_reset_dio_timer(instance);
   rpl_set_default_route(instance, from);
 
+#if !WITH_ORPL
   if(instance->mop != RPL_MOP_NO_DOWNWARD_ROUTES) {
-    rpl_schedule_dao(instance);
+      rpl_schedule_dao(instance);
   } else {
     PRINTF("RPL: The DIO does not meet the prerequisites for sending a DAO\n");
   }
+#endif /* !WITH_ORPL */
 }
 
 /*---------------------------------------------------------------------------*/
@@ -992,7 +1001,9 @@ rpl_add_dag(uip_ipaddr_t *from, rpl_dio_t *dio)
       return;
     }
     PRINTF("succeeded\n");
-  } else {
+  }
+#if !WITH_ORPL /* ORPL supports only one instance, only EDC as objective function */
+  else {
     p = rpl_find_parent(previous_dag, from);
     if(p != NULL) {
       rpl_move_parent(previous_dag, dag, p);
@@ -1017,6 +1028,8 @@ rpl_add_dag(uip_ipaddr_t *from, rpl_dio_t *dio)
     dag->used = 0;
     return;
   }
+
+#endif /* !WITH_ORPL */
 
   dag->used = 1;
   dag->grounded = dio->grounded;
@@ -1190,6 +1203,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
   dag = get_dag(dio->instance_id, &dio->dag_id);
   instance = rpl_get_instance(dio->instance_id);
 
+#if !WITH_ORPL /* No global repair in ORPL */
   if(dag != NULL && instance != NULL) {
     if(lollipop_greater_than(dio->version, dag->version)) {
       if(dag->rank == ROOT_RANK(instance)) {
@@ -1219,6 +1233,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
       }
     }
   }
+#endif /* !WITH_ORPL */
 
   if(instance == NULL) {
     PRINTF("RPL: New instance detected: Joining...\n");
@@ -1288,13 +1303,16 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
       PRINTF("RPL: New candidate parent with rank %u: ", (unsigned)p->rank);
       PRINT6ADDR(from);
       PRINTF("\n");
-    } else {
+    }
+#if !WITH_ORPL /* ORPL supports only one DAG */
+    else {
       p = rpl_find_parent(previous_dag, from);
       if(p != NULL) {
         rpl_move_parent(previous_dag, dag, p);
       }
     }
-  } else {
+#endif /* !WITH_ORPL */
+  }else {
     if(p->rank == dio->rank) {
       PRINTF("RPL: Received consistent DIO\n");
       if(dag->joined) {
@@ -1329,6 +1347,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
     return;
   }
 
+#if !WITH_ORPL /* ORPL does not use routes nor DAO */
   /* We don't use route control, so we can have only one official parent. */
   if(dag->joined && p == dag->preferred_parent) {
     if(should_send_dao(instance, dio, p)) {
@@ -1339,6 +1358,7 @@ rpl_process_dio(uip_ipaddr_t *from, rpl_dio_t *dio)
      * Call uip_ds6_defrt_add to set a fresh value for the lifetime counter */
     uip_ds6_defrt_add(from, RPL_LIFETIME(instance, instance->default_lifetime));
   }
+#endif /* !WITH_ORPL */
   p->dtsn = dio->dtsn;
 }
 /*---------------------------------------------------------------------------*/

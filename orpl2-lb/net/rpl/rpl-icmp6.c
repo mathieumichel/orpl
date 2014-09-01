@@ -99,7 +99,7 @@ void RPL_DEBUG_DAO_OUTPUT(rpl_parent_t *);
 extern rpl_of_t RPL_OF;
 
 /*---------------------------------------------------------------------------*/
-static int
+int
 get_global_addr(uip_ipaddr_t *addr)
 {
   int i;
@@ -147,6 +147,7 @@ set16(uint8_t *buffer, int pos, uint16_t value)
   buffer[pos++] = value & 0xff;
 }
 /*---------------------------------------------------------------------------*/
+#if !WITH_ORPL
 static void
 dis_input(void)
 {
@@ -203,6 +204,7 @@ dis_output(uip_ipaddr_t *addr)
 
   uip_icmp6_send(addr, ICMP6_RPL, RPL_CODE_DIS, 2);
 }
+#endif /* !WITH_ORPL */
 /*---------------------------------------------------------------------------*/
 static void
 dio_input(void)
@@ -345,10 +347,6 @@ dio_input(void)
        PRINTF("RPL: Unhandled DAG MC type: %u\n", (unsigned)dio.mc.type);
        return;
       }
-#if 0//WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
-    dio.mc.dctarget.dctarget_sn=buffer[i + 8];
-    dio.mc.dctarget.dctarget_est=buffer[i + 9];
-#endif
       break;
     case RPL_OPTION_ROUTE_INFO:
       if(len < 9) {
@@ -508,13 +506,7 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
 	(unsigned)instance->mc.type);
       return;
     }
-#if 0//WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
-    buffer[pos++] = 2;
-    buffer[pos++] = instance->mc.dctarget.dctarget_sn;
-    buffer[pos++] = instance->mc.dctarget.dctarget_est;
-#endif
   }
-  rpl_metric_container_t mc;
 #endif /* !RPL_LEAF_ONLY */
 
   /* Always add a DAG configuration option. */
@@ -586,6 +578,7 @@ dio_output(rpl_instance_t *instance, uip_ipaddr_t *uc_addr)
 #endif /* RPL_LEAF_ONLY */
 }
 /*---------------------------------------------------------------------------*/
+#if !WITH_ORPL
 static void
 dao_input(void)
 {
@@ -900,6 +893,7 @@ dao_ack_output(rpl_instance_t *instance, uip_ipaddr_t *dest, uint8_t sequence)
 
   uip_icmp6_send(dest, ICMP6_RPL, RPL_CODE_DAO_ACK, 4);
 }
+#endif /* !WITH_ORPL */
 /*---------------------------------------------------------------------------*/
 void
 uip_rpl_input(void)
@@ -909,6 +903,7 @@ uip_rpl_input(void)
   case RPL_CODE_DIO:
     dio_input();
     break;
+#if !WITH_ORPL
   case RPL_CODE_DIS:
     dis_input();
     break;
@@ -918,6 +913,7 @@ uip_rpl_input(void)
   case RPL_CODE_DAO_ACK:
     dao_ack_input();
     break;
+#endif /* !WITH_ORPL */
   default:
     PRINTF("RPL: received an unknown ICMP6 code (%u)\n", UIP_ICMP_BUF->icode);
     break;

@@ -85,7 +85,7 @@ We just update EDC periodically */
   rpl_recalculate_ranks();
 
   /* handle DIS */
-#ifdef RPL_DIS_SEND
+#if RPL_DIS_SEND
   next_dis++;
   if(rpl_get_any_dag() == NULL && next_dis >= RPL_DIS_INTERVAL) {
     next_dis = 0;
@@ -162,32 +162,17 @@ handle_dio_timer(void *ptr)
   if(instance->dio_send) {
 #if WITH_ORPL_LB && WITH_ORPL_LB_DIO_TARGET
   if(orpl_is_root()){
-//    if(dc_obj_metric !=0){
-//        if((uint16_t)dc_obj_metric >= wu_target+50){
-//          dc_min=dio_dc_objective+1;
-//        }
-//        else if((uint16_t)dc_obj_metric <= wu_target-50){
-//          dc_max=dio_dc_objective-1;
-//        }
-//        dio_dc_objective=dc_min+(dc_max-dc_min)/2;
-//    }
-//
-//        dio_dc_obj_sn=dio_dc_obj_sn++;
-//       ORPL_LOG("ORPL_LB: dc_obj %u-%u-%u  %lu\n",dio_dc_objective,dc_min,dc_max,dc_obj_metric);
-//        dc_obj_metric=0;//reset (normally not needed)
-//        dc_obj_count=0;//reset
-
     if(dc_obj_metric !=0){
       dc_obj_metric=dc_obj_metric/((uint32_t)dc_obj_count);
     }
     if(dc_fixed<2){//optimum not yet found
       if(dc_obj_metric !=0){
-        if(dc_obj_metric <= prev){
+        if(dc_obj_metric <= prev-1){
           dio_dc_objective=dio_dc_objective-5;
           dc_fixed=0;//previous step was decrease
         }
-        else if(dc_obj_metric > prev){
-          dc_fixed++;
+        else if(dc_obj_metric > prev+1){
+            dc_fixed++;
           if(dc_fixed==2){
             dio_dc_objective=dio_dc_objective + 5;
           }
@@ -237,9 +222,11 @@ handle_dio_timer(void *ptr)
 void
 rpl_reset_periodic_timer(void)
 {
+#if RPL_DIS_SEND
   next_dis = RPL_DIS_INTERVAL / 2 +
     ((uint32_t)RPL_DIS_INTERVAL * (uint32_t)random_rand()) / RANDOM_RAND_MAX -
     RPL_DIS_START_DELAY;
+#endif
   ctimer_set(&periodic_timer, CLOCK_SECOND, handle_periodic_timer, NULL);
 }
 /*---------------------------------------------------------------------------*/
@@ -261,6 +248,7 @@ rpl_reset_dio_timer(rpl_instance_t *instance)
 #endif /* RPL_LEAF_ONLY */
 }
 /*---------------------------------------------------------------------------*/
+#if !WITH_ORPL
 static void
 handle_dao_timer(void *ptr)
 {
@@ -303,5 +291,6 @@ rpl_schedule_dao(rpl_instance_t *instance)
                handle_dao_timer, instance);
   }
 }
+#endif /* !WITH_ORPL */
 /*---------------------------------------------------------------------------*/
 #endif /* UIP_CONF_IPV6 */

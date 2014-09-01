@@ -69,6 +69,7 @@ AUTOSTART_PROCESSES(&unicast_sender_process);
 
 uint32_t dc_obj_metric=0;
 uint16_t dc_obj_count=0;
+uint8_t dead=0;
 static void
 receiver(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
@@ -140,9 +141,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
   cc2420_set_cca_threshold(RSSI_THR);
   orpl_log_start();
   
-#if !WITH_ORPL_LB //the load balancing function included the calcul of the duty cycle
-  simple_energest_start();
-#endif /*!WITH_ORPL_LB*/
+
  //printf("App: %u starting\n", node_id);
 
   deployment_init(&global_ipaddr);
@@ -166,6 +165,10 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {
+      if(dead){
+        //printf("dying\n");
+        PROCESS_EXIT();
+      }
 #if WITH_VARIABLE_TXRATE
       compteur+=1;
       printf("App: plop %u\n",compteur);
