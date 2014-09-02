@@ -75,18 +75,17 @@
 #include "deployment.h"
 #include "orpl-log.h"
 
-#define LB_DATAPERIOD 1*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 60*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_DATAPERIOD 2*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
+#define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
 #define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.75
 #define CYCLE_STEP_MAX (CYCLE_TIME / 4)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
-#define DC_ALPHA 0.25
+#define DC_ALPHA 0.10
+
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
-#define HYSTERESIS 0 // 0.05
+#define HYSTERESIS 2 // 0.0x
 
-
-#define WITH_ENERGY_THRESHOLD 1
 #if WITH_ENERGY_THRESHOLD
 static uint32_t total_dc_spent;
 extern uint8_t dead;//use to signal at the app that the node is down
@@ -105,8 +104,8 @@ static uint32_t curr_tx, curr_rx, curr_time;
 
 static uint32_t delta_tx, delta_rx, delta_time;
 #if COLLECT_ONLY
-extern uint16_t packet_count;
-uint16_t packet_count_prev;
+uint16_t packet_count_total;
+uint16_t packet_count_current;
 #endif
 uint16_t periodic_dc, objective_dc, weighted_dc;
 #if WITH_ORPL_LB_DIO_TARGET
@@ -701,57 +700,62 @@ static void managecycle(void *ptr){
 #endif /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
 
 
-    if(weighted_dc==0){
-      weighted_dc=objective_dc;
-      //weighted_dc=periodic_dc;
-    }
+//    if(weighted_dc==0){
+//      weighted_dc=objective_dc;
+//      //weighted_dc=periodic_dc;
+//    }
+    weighted_dc=(periodic_dc + ((uint32_t)cpt) * weighted_dc)/(uint32_t)(cpt+1);
+    //weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
 
-      weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
-
-      ORPL_LOG("ORPL_LB: DC : %u - %u",periodic_dc,weighted_dc);
-      if(loadbalancing_is_on){
-        if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
-          uint32_t temp_cycle;
-          uint16_t weight=0;//the weight must be defined based on the current duty-cycle
-          uint32_t cycle_diff;
-          if(weighted_dc  > objective_dc){
-            weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
-          }
-          else if(weighted_dc  < objective_dc){
-            weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
-          }
-
-          if(weight > 100){
-            weight=100;
-          }
-          cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
-          if(weighted_dc > objective_dc){
-            temp_cycle = cycle_time+cycle_diff;
-            if(temp_cycle > CYCLE_MAX){
-              temp_cycle=CYCLE_MAX;
-            }
-          }
-          else{
-            temp_cycle = cycle_time-cycle_diff;
-            if(temp_cycle < CYCLE_MIN){
-              temp_cycle=CYCLE_MIN;
-            }
-          }
-          cycle_time=temp_cycle;
+    ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
+    if(loadbalancing_is_on){
+      if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+        uint32_t temp_cycle;
+        uint16_t weight=0;//the weight must be defined based on the current duty-cycle
+        uint32_t cycle_diff;
+        if(weighted_dc  > objective_dc){
+          weight = ((uint16_t)((weighted_dc-objective_dc)*100/objective_dc));
         }
-    }
-    ORPL_LOG(" -> %lu\n",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
-#if 0//COLLECT_ONLY
-    if((cpt+3)%4==0){//every 4 LB_data periods after initialisation we check the network load
-      if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
-        setLoadBalancing(0);
-        ORPL_LOG("LB check(%u-%u)\n",packet_count,packet_count_prev);
-      }
-      packet_count_prev=packet_count;
-      packet_count=0;
-    }
-#endif
+        else if(weighted_dc  < objective_dc){
+          weight = ((uint16_t)((objective_dc-weighted_dc)*100/objective_dc));
+        }
 
+        if(weight > 100){
+          weight=100;
+        }
+        cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
+        //cycle_diff=CYCLE_STEP_MAX;
+        if(weighted_dc > objective_dc){
+          temp_cycle = cycle_time+cycle_diff;
+          if(temp_cycle > CYCLE_MAX){
+            temp_cycle=CYCLE_MAX;
+          }
+        }
+        else{
+          temp_cycle = cycle_time-cycle_diff;
+          if(temp_cycle < CYCLE_MIN){
+            temp_cycle=CYCLE_MIN;
+          }
+        }
+        cycle_time=temp_cycle;
+      }
+      ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+    }
+    else{
+      ORPL_LOG(" -> %lu (F)",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
+    }
+
+#if COLLECT_ONLY
+//      if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
+//        setLoadBalancing(0);
+//        ORPL_LOG("LB check(%u-%u)\n",packet_count,packet_count_prev);
+//      }
+      //packet_count_total=(packet_count_current + ((uint32_t)cpt) * packet_count_total)/(uint32_t)(cpt+1);
+      packet_count_total+=packet_count_current;
+      ORPL_LOG(" / %u - %u ",(packet_count_total*100)/(cpt+1),packet_count_current);
+      packet_count_current=0;
+#endif
+   ORPL_LOG("\n");
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
                   cpt++,
@@ -1454,6 +1458,7 @@ input_packet(void)
         ORPL_LOG_FROM_PACKETBUF("Cmac: input from %d",
             ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER))
         );
+        packet_count_current+=1;
       }
       
       NETSTACK_MAC.input();

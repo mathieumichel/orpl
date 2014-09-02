@@ -62,9 +62,6 @@ extern uint8_t queuebuf_len;
 #include "orpl.h"
 #include "orpl-anycast.h"
 #define UIP_IP_BUF ((struct uip_ip_hdr *)&uip_buf[UIP_LLH_LEN])
-#if COLLECT_ONLY
-uint16_t packet_count;
-#endif
 #endif /* WITH_ORPL */
 
 #include <string.h>
@@ -341,9 +338,6 @@ packet_sent(void *ptr, int status, int num_transmissions)
         	      ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
         	  PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
         	      status, n->transmissions, n->collisions);
-#if COLLECT_ONLY
-            packet_count+=1;
-#endif
             //packetbuf_set_attr(PACKETBUF_ATTR_EDC, 0xffff);//MF-BUG
         	  free_packet(n, q);
         	  mac_call_sent_callback(sent, cptr, status, num_tx);
@@ -364,9 +358,6 @@ packet_sent(void *ptr, int status, int num_transmissions)
                                  &rimeaddr_null)) {
             ORPL_LOG_FROM_PACKETBUF("Csma: success %u after %d tx, %d collisions",
                 ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER)), n->transmissions, n->collisions);
-#if COLLECT_ONLY
-            packet_count+=1;
-#endif
           }
 #endif /* WITH_ORPL */
           PRINTF("csma: rexmit ok %d\n", n->transmissions);
