@@ -77,11 +77,11 @@
 
 #define LB_DATAPERIOD 2*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
 #define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
-#define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
-#define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
+#define CYCLE_MAX  (2000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
+#define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define DUTY_CYCLE_TARGET   0.75
-#define CYCLE_STEP_MAX (CYCLE_TIME / 4)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
-#define DC_ALPHA 0.10
+#define CYCLE_STEP_MAX (CYCLE_TIME)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
+#define DC_ALPHA 0.25
 
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
 #define HYSTERESIS 2 // 0.0x
@@ -107,7 +107,7 @@ static uint32_t delta_tx, delta_rx, delta_time;
 uint16_t packet_count_total;
 uint16_t packet_count_current;
 #endif
-uint16_t periodic_dc, objective_dc, weighted_dc;
+uint16_t periodic_dc, objective_dc, weighted_dc, averaged_dc;
 #if WITH_ORPL_LB_DIO_TARGET
 uint16_t periodic_tx_dc=0;
 #endif
@@ -704,12 +704,13 @@ static void managecycle(void *ptr){
 //      weighted_dc=objective_dc;
 //      //weighted_dc=periodic_dc;
 //    }
-    weighted_dc=(periodic_dc + ((uint32_t)cpt) * weighted_dc)/(uint32_t)(cpt+1);
-    //weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
-
+    averaged_dc=(periodic_dc + ((uint32_t)cpt) * averaged_dc)/(uint32_t)(cpt+1);
+    //weighted_dc=averaged_dc;
+    weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
+    ORPL_LOG("ORPL_LB2: %u\n",averaged_dc);
     ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
     if(loadbalancing_is_on){
-      if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+      if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
         uint32_t temp_cycle;
         uint16_t weight=0;//the weight must be defined based on the current duty-cycle
         uint32_t cycle_diff;

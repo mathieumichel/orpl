@@ -36,7 +36,7 @@
 
 #define WITH_ORPL 1
 #define COLLECT_ONLY 1 //used for adapt logging to require less memory
-#define WITH_ENERGY_THRESHOLD 0
+#define WITH_ENERGY_THRESHOLD 1
 
 /* The IEEE 802.15.4 channel in use */
 #undef RF_CHANNEL
@@ -54,7 +54,7 @@ typedef uint32_t rtimer_clock_t;
 #define RTIMER_CLOCK_LT(a,b)     ((int32_t)(((rtimer_clock_t)a)-((rtimer_clock_t)b)) < 0)
 
 /* The ContikiMAC wakeup interval */
-#define CONTIKIMAC_CONF_CYCLE_TIME (RTIMER_ARCH_SECOND / 2)
+#define CONTIKIMAC_CONF_CYCLE_TIME (RTIMER_ARCH_SECOND / 8)
 
 /* The neighbor table size */
 #undef NBR_TABLE_CONF_MAX_NEIGHBORS
