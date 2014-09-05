@@ -72,16 +72,25 @@
 #endif
 
 #if WITH_ORPL_LB
+
+#define NEW_MODE 1
 #include "deployment.h"
 #include "orpl-log.h"
 
+
 #define LB_DATAPERIOD 2*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
-#define CYCLE_MAX  (2000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
-#define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define DUTY_CYCLE_TARGET   0.75
-#define CYCLE_STEP_MAX (CYCLE_TIME)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
+#define LB_GUARD_TIME 120*60*CLOCK_SECOND //guard timer before starting load balancing
+#define DUTY_CYCLE_TARGET   0.65
 #define DC_ALPHA 0.25
+#if NEW_MODE
+#define CYCLE_MAX  (1000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
+#define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
+#define CYCLE_STEP_MAX (CYCLE_MIN)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
+#else
+#define CYCLE_MAX  (1500 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
+#define CYCLE_MIN (50 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
+#define CYCLE_STEP_MAX (CYCLE_TIME/4)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
+#endif
 
 #define CHANGE_STROBE_TIME 1 //are we changing the strobed time based on the cycle max (not for bcast)
 #define HYSTERESIS 2 // 0.0x
@@ -89,7 +98,7 @@
 #if WITH_ENERGY_THRESHOLD
 static uint32_t total_dc_spent;
 extern uint8_t dead;//use to signal at the app that the node is down
-#define ENERGY_THRESHOLD 7000 //when the total duty-cycle-spent is higher than this thrshold the node dies
+#define ENERGY_THRESHOLD 1500 //when the total duty-cycle-spent is higher than this thrshold the node dies
 #endif /* WITH_ENERGY_THRESHOLD */
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
@@ -700,17 +709,21 @@ static void managecycle(void *ptr){
 #endif /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
 
 
-//    if(weighted_dc==0){
-//      weighted_dc=objective_dc;
-//      //weighted_dc=periodic_dc;
-//    }
+    if(weighted_dc==0){
+      weighted_dc=objective_dc;
+      //weighted_dc=periodic_dc;
+    }
     averaged_dc=(periodic_dc + ((uint32_t)cpt) * averaged_dc)/(uint32_t)(cpt+1);
     //weighted_dc=averaged_dc;
     weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
     ORPL_LOG("ORPL_LB2: %u\n",averaged_dc);
     ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
     if(loadbalancing_is_on){
-      if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+#if NEW_MODE
+      if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS){
+#else
+      if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+#endif
         uint32_t temp_cycle;
         uint16_t weight=0;//the weight must be defined based on the current duty-cycle
         uint32_t cycle_diff;

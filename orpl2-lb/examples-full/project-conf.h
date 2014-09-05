@@ -54,7 +54,7 @@ typedef uint32_t rtimer_clock_t;
 #define RTIMER_CLOCK_LT(a,b)     ((int32_t)(((rtimer_clock_t)a)-((rtimer_clock_t)b)) < 0)
 
 /* The ContikiMAC wakeup interval */
-#define CONTIKIMAC_CONF_CYCLE_TIME (RTIMER_ARCH_SECOND / 8)
+#define CONTIKIMAC_CONF_CYCLE_TIME (RTIMER_ARCH_SECOND / 2 )
 
 /* The neighbor table size */
 #undef NBR_TABLE_CONF_MAX_NEIGHBORS

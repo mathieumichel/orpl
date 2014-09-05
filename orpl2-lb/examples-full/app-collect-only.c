@@ -118,6 +118,7 @@ void app_send_to(uint16_t id) {
 
   simple_udp_sendto(&unicast_connection, &data, sizeof(data), &dest_ipaddr);
 
+
   cnt++;
 }
 /*---------------------------------------------------------------------------*/
@@ -165,10 +166,10 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {
-      if(dead){
-        //printf("dying\n");
-        PROCESS_EXIT();
-      }
+//      if(dead){
+//        //printf("dying\n");
+//        PROCESS_EXIT();
+//      }
 #if WITH_VARIABLE_TXRATE
       compteur+=1;
       printf("App: plop %u\n",compteur);
@@ -206,7 +207,12 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
       PROCESS_WAIT_UNTIL(etimer_expired(&send_timer));
        
        if(default_instance != NULL) {
-        app_send_to(ROOT_ID);
+         if(dead){
+           ORPL_LOG("App: DEAD\n");
+          }
+         else{
+           app_send_to(ROOT_ID);
+         }
       } //else {
        // printf("App: not in DODAG\n");
       //}
