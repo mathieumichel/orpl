@@ -73,7 +73,7 @@
 
 #if WITH_ORPL_LB
 
-#define NEW_MODE 1
+#define NEW_MODE 0
 #include "deployment.h"
 #include "orpl-log.h"
 
@@ -98,7 +98,7 @@
 #if WITH_ENERGY_THRESHOLD
 static uint32_t total_dc_spent;
 extern uint8_t dead;//use to signal at the app that the node is down
-#define ENERGY_THRESHOLD 1500 //when the total duty-cycle-spent is higher than this thrshold the node dies
+#define ENERGY_THRESHOLD 35000 //when the total duty-cycle-spent is higher than this thrshold the node dies
 #endif /* WITH_ENERGY_THRESHOLD */
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
@@ -1472,7 +1472,9 @@ input_packet(void)
         ORPL_LOG_FROM_PACKETBUF("Cmac: input from %d",
             ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_SENDER))
         );
+#if COLLECT_ONLY && WITH_ORPL_LB
         packet_count_current+=1;
+#endif /* COLLECT_ONLY */
       }
       
       NETSTACK_MAC.input();
