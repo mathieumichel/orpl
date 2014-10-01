@@ -79,7 +79,7 @@
 
 
 #define LB_DATAPERIOD 2*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 120*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
 #define DUTY_CYCLE_TARGET   0.65
 #define DC_ALPHA 0.25
 #if NEW_MODE
