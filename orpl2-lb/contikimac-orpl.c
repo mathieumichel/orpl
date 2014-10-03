@@ -669,7 +669,7 @@ static void setLoadBalancing(int mode){
 static void managecycle(void *ptr){
   if(contikimac_is_on)
   {
-    static uint16_t cpt,count_up,count_down,packet_count_ref;;
+    static uint16_t cpt,count_up,count_down,packet_count_ref,packet_count_avg;
     energest_flush();
     curr_tx = energest_type_time(ENERGEST_TYPE_TRANSMIT);
     curr_rx = energest_type_time(ENERGEST_TYPE_LISTEN);
@@ -755,6 +755,12 @@ static void managecycle(void *ptr){
             temp_cycle=CYCLE_MIN;
           }
         }
+        if(count_up !=0){
+          count_up+=1;
+        }
+        else if(count_down!=0){
+          count_down+=1;
+        }
         cycle_time=temp_cycle;
       }
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
@@ -771,14 +777,22 @@ static void managecycle(void *ptr){
 
       //packet_count_total=(packet_count_current + ((uint32_t)cpt) * packet_count_total)/(uint32_t)(cpt+1);
       packet_count_total+=packet_count_current;
-      uint16_t packet_count_avg=(packet_count_total*100)/(cpt+1);
-      //if we increase or decrease the WI we recored the current averaged fw count
+      //uint16_t packet_count_avg=(packet_count_total*100)/(cpt+1);
+      packet_count_avg=(uint16_t)((DC_ALPHA*100ul*packet_count_current + (1*100ul-DC_ALPHA*100ul)*packet_count_avg)/100ul);
+      //if we increase or decrease the WI we record the current averaged fw count
       if(count_down==1 || count_up==1){
-                  packet_count_ref=packet_count_avg;
+        packet_count_ref=packet_count_avg;
+        printf("check_ref: %u\n",packet_count_ref);
       }
       //after 5 periods we check if the average fw count has decreased (WI increased) or increased (WI decreased)
-      else if((count_up >= 5 && packet_count_avg > packet_count_ref) || (count_down <= 5 && packet_count_avg < packet_count_ref)){
+      else if((count_up%5==0 && packet_count_avg > packet_count_ref && CYCLE_TIME > CONTIKIMAC_CONF_CYCLE_TIME + CYCLE_MIN) || (count_down%5==0 && packet_count_avg < packet_count_ref  && CYCLE_TIME < CONTIKIMAC_CONF_CYCLE_TIME - CYCLE_MIN)){
         cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
+        packet_count_ref=packet_count_avg;
+        //if after two tentatives the fw count doesn't change we disable loadbalancing
+        printf("check_dis: %u-%u\n",packet_count_ref,packet_count_avg);
+        if(count_up/5==2){
+          setLoadBalancing(0);
+        }
       }
       ORPL_LOG(" / %u - %u ",packet_count_avg,packet_count_current);
       packet_count_current=0;
