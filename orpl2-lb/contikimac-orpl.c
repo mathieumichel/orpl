@@ -73,13 +73,13 @@
 
 #if WITH_ORPL_LB
 
-#define NEW_MODE 0
+#define NEW_MODE 1
 #include "deployment.h"
 #include "orpl-log.h"
 
 
 #define LB_DATAPERIOD 2*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_TIME 10*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_TIME 20*60*CLOCK_SECOND //guard timer before starting load balancing
 #define DUTY_CYCLE_TARGET   0.65
 #define DC_ALPHA 0.25
 #if NEW_MODE
@@ -669,7 +669,7 @@ static void setLoadBalancing(int mode){
 static void managecycle(void *ptr){
   if(contikimac_is_on)
   {
-    static uint16_t cpt,count_up,count_down,packet_count_ref,packet_count_avg;
+    static uint16_t cpt,count_up,count_down,packet_count_ref,packet_count_avg;;
     energest_flush();
     curr_tx = energest_type_time(ENERGEST_TYPE_TRANSMIT);
     curr_rx = energest_type_time(ENERGEST_TYPE_LISTEN);
@@ -718,6 +718,7 @@ static void managecycle(void *ptr){
     weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
     ORPL_LOG("ORPL_LB2: %u\n",averaged_dc);
     ORPL_LOG("ORPL_LB: %u - %u",periodic_dc,weighted_dc);
+
     if(loadbalancing_is_on){
 #if NEW_MODE
       if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS){
@@ -755,12 +756,6 @@ static void managecycle(void *ptr){
             temp_cycle=CYCLE_MIN;
           }
         }
-        if(count_up !=0){
-          count_up+=1;
-        }
-        else if(count_down!=0){
-          count_down+=1;
-        }
         cycle_time=temp_cycle;
       }
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
@@ -768,36 +763,9 @@ static void managecycle(void *ptr){
     else{
       ORPL_LOG(" -> %lu (F)",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
+      ORPL_LOG("\n");
 
-#if COLLECT_ONLY
-//      if(loadbalancing_is_on && cycle_time >= CYCLE_MAX && packet_count >=50 && packet_count > packet_count_prev - 10){// packet_count_prev >=50 && packet_count > packet_count_prev-10){
-//        setLoadBalancing(0);
-//        ORPL_LOG("LB check(%u-%u)\n",packet_count,packet_count_prev);
-//      }
-
-      //packet_count_total=(packet_count_current + ((uint32_t)cpt) * packet_count_total)/(uint32_t)(cpt+1);
-      packet_count_total+=packet_count_current;
-      //uint16_t packet_count_avg=(packet_count_total*100)/(cpt+1);
-      packet_count_avg=(uint16_t)((DC_ALPHA*100ul*packet_count_current + (1*100ul-DC_ALPHA*100ul)*packet_count_avg)/100ul);
-      //if we increase or decrease the WI we record the current averaged fw count
-      if(count_down==1 || count_up==1){
-        packet_count_ref=packet_count_avg;
-        printf("check_ref: %u\n",packet_count_ref);
-      }
-      //after 5 periods we check if the average fw count has decreased (WI increased) or increased (WI decreased)
-      else if((count_up%5==0 && packet_count_avg > packet_count_ref && CYCLE_TIME > CONTIKIMAC_CONF_CYCLE_TIME + CYCLE_MIN) || (count_down%5==0 && packet_count_avg < packet_count_ref  && CYCLE_TIME < CONTIKIMAC_CONF_CYCLE_TIME - CYCLE_MIN)){
-        cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-        packet_count_ref=packet_count_avg;
-        //if after two tentatives the fw count doesn't change we disable loadbalancing
-        printf("check_dis: %u-%u\n",packet_count_ref,packet_count_avg);
-        if(count_up/5==2){
-          setLoadBalancing(0);
-        }
-      }
-      ORPL_LOG(" / %u - %u ",packet_count_avg,packet_count_current);
-      packet_count_current=0;
-#endif
-   ORPL_LOG("\n");
+   //ORPL_LOG("\n");
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
                   cpt++,
@@ -813,6 +781,27 @@ static void managecycle(void *ptr){
     printf("cc2420: seen %lu decoded %lu\n", packet_seen_count, sfd_decoded_count);
 #endif
     ctimer_reset(&ct_check);
+#if COLLECT_ONLY
+      packet_count_total+=packet_count_current;
+      packet_count_avg=(uint16_t)(DC_ALPHA*100ul*packet_count_current + ((1*100ul-DC_ALPHA*100ul)*packet_count_avg)/100ul);
+      //packet_count_avg=(uint16_t)(DC_ALPHA*100ul*packet_count_current*100ul + ((1*100ul-DC_ALPHA*100ul)*packet_count_avg)/100ul);
+      if(count_down==1 || count_up==1){
+        packet_count_ref=packet_count_avg;
+        printf("check_ref: %u-%u-%u\n",packet_count_ref,cpt,LB_GUARD_TIME/LB_DATAPERIOD);
+      }
+      //after 5 periods we check if the average fw count has decreased (WI increased) or increased (WI decreased)
+      else if((count_up%5==0 && packet_count_avg > packet_count_ref && CYCLE_TIME > CONTIKIMAC_CONF_CYCLE_TIME + CYCLE_MIN) || (count_down%5==0 && packet_count_avg < packet_count_ref  && CYCLE_TIME < CONTIKIMAC_CONF_CYCLE_TIME - CYCLE_MIN)){
+        cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
+        packet_count_ref=packet_count_avg;
+        //if after two tentatives the fw count doesn't change we disable loadbalancing
+        printf("check_dis: %u-%u\n",packet_count_ref,packet_count_avg);
+        if(count_up/5==2){
+          setLoadBalancing(0);
+        }
+      }
+      ORPL_LOG("check_temp: / %u - %u (%u-%u)\n ",packet_count_avg,packet_count_current,count_up, count_down);
+      packet_count_current=0;
+#endif
   }
 }
 #endif /*WITH_ORPL_LB*/
