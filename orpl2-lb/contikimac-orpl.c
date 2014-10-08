@@ -721,10 +721,11 @@ static void managecycle(void *ptr){
 
     if(loadbalancing_is_on){
 #if NEW_MODE
-      if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS){
+      if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS)
 #else
-      if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS){//we change only if the weighted-dc says we have to
+      if(weighted_dc > objective_dc + HYSTERESIS || weighted_dc < objective_dc - HYSTERESIS)//we change only if the weighted-dc says we have to
 #endif
+      {
         uint32_t temp_cycle;
         uint16_t weight=0;//the weight must be defined based on the current duty-cycle
         uint32_t cycle_diff;
@@ -782,39 +783,51 @@ static void managecycle(void *ptr){
 #endif
     ctimer_reset(&ct_check);
 #if COLLECT_ONLY
-      //packet_count_total+=packet_count_current;
-      //packet_count_avg=(uint16_t)(DC_ALPHA*100ul*packet_count_current + ((1*100ul-DC_ALPHA*100ul)*packet_count_avg)/100ul);
-      //packet_count_avg=(uint16_t)(DC_ALPHA*100ul*packet_count_current*100ul + ((1*100ul-DC_ALPHA*100ul)*packet_count_avg)/100ul);
+
+
+      if(count_down==1 || count_up==1)
+      {
+        packet_count_current=0;
+        packet_count_prev=packet_count_avg;
+        period_count=0;
+      }
+
       if(cpt>5){//wait 10 min before sending packets (=4periods)
         period_count+=1;
         //we use avg because we don't check at constant interval
         packet_count_avg=(uint16_t)100ul*packet_count_current/period_count;
       }
-      ORPL_LOG("check_temp: / %u - %u - %u (%u-%u-%u)\n ",packet_count_prev,packet_count_avg,packet_count_current,count_up, count_down,period_count);
-      if(count_down==1 || count_up==1){
-        //packet_count_ref=packet_count_avg;
-        //packet_count_prev=packet_count_current;
-        packet_count_current=0;
-        packet_count_prev=packet_count_avg;
-        period_count=0;
-        //printf("check_ref: %u-%u-%u\n",packet_count_ref,cpt,LB_GUARD_TIME/LB_DATAPERIOD);
-      }
-      if((count_up %5==0 && count_up!=0) || (count_down%5==0 && count_down!=0))
+
+      ORPL_LOG("check_temp: / %u - %u - %u (%u-%u-%u)\n",packet_count_prev,packet_count_avg,packet_count_current,count_up, count_down,period_count);
+
+      if((count_up %5==0 && count_up !=0) || (count_down !=0 && count_down%5==0))
       {
-        //packet_count_prev=packet_count_current;
-        //packet_count_current=0;
-        packet_count_current=0;
-        period_count=0;
+        ORPL_LOG("check_dis: %u-%u",packet_count_prev,packet_count_avg);
         //after 5 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
         if((packet_count_avg >= packet_count_prev && CYCLE_TIME > CONTIKIMAC_CONF_CYCLE_TIME + CYCLE_MIN) || (packet_count_avg <= packet_count_prev  && CYCLE_TIME < CONTIKIMAC_CONF_CYCLE_TIME - CYCLE_MIN)){
           cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
           //if after two tentatives the fw count doesn't change we disable loadbalancing
-          ORPL_LOG("check_dis: %u-%u\n",packet_count_prev,packet_count_avg);
-          if(count_up/5==2 || count_down/5==2){// after two disable we disable load balancing
+          ORPL_LOG(" [BACK]\n");
+          packet_count_current=0;
+          packet_count_prev=packet_count_avg;
+          period_count=0;
+          if(count_up/5>=2 || count_down/5>=2){// after two disable we disable load balancing
             setLoadBalancing(0);
           }
         }
+
+        else{
+          if(count_up>0){
+            count_up=0;
+          }
+          else{
+            count_down=0;
+          }
+
+          ORPL_LOG("\n");
+        }
       }
+
 
 
 #endif
