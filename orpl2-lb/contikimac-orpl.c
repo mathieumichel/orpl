@@ -80,7 +80,7 @@
 
 #define LB_DATAPERIOD 2*60*CLOCK_SECOND //period between two checks (used with ctimer) based on the sending rate
 #define LB_GUARD_TIME 20*60*CLOCK_SECOND //guard timer before starting load balancing
-#define DUTY_CYCLE_TARGET   0.65
+#define DUTY_CYCLE_TARGET   0.70
 #define DC_ALPHA 0.25
 #if NEW_MODE
 #define CYCLE_MAX  (1000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
@@ -122,6 +122,8 @@ uint16_t periodic_tx_dc=0;
 #endif
 uint32_t strobe_time, default_strobe_time, bcast_strobe_time;//use to manage strobe_time
 int loadbalancing_is_on=0;//MF
+uint16_t packet_count_avg,packet_count_prev;
+uint32_t cycle_time_avg;
 #endif /*WITH_ORPL_LB*/
 
 #define WITH_SFD_COMPUTATION 0
@@ -652,24 +654,31 @@ powercycle(struct rtimer *t, void *ptr)
 
 
 static void setLoadBalancing(int mode){
+  if(mode!=loadbalancing_is_on){
   loadbalancing_is_on=mode;
-  if(loadbalancing_is_on){
-    ORPL_LOG("ORPL_LB ON\n");
+    if(loadbalancing_is_on){
+      ORPL_LOG("ORPL_LB ON\n");
 #if CHANGE_STROBE_TIME
       default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
 #endif
+      packet_count_prev=packet_count_avg;
+    }
+    else{
+      ORPL_LOG("ORPL_LB OFF\n");
+      //default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
+      cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
+    }
+    ctimer_stop(&ct_guard);//disable the guard timer
   }
-  else{
-    ORPL_LOG("ORPL_LB OFF\n");
-    //default_strobe_time=CONTIKIMAC_CONF_CYCLE_TIME;
-    cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-  }
-  ctimer_stop(&ct_guard);//disable the guard timer
 }
+
+
+
+
 static void managecycle(void *ptr){
   if(contikimac_is_on)
   {
-    static uint16_t cpt,count_up,count_down,period_count,packet_count_ref,packet_count_avg,packet_count_prev;
+    static uint16_t cpt;
     energest_flush();
     curr_tx = energest_type_time(ENERGEST_TYPE_TRANSMIT);
     curr_rx = energest_type_time(ENERGEST_TYPE_LISTEN);
@@ -743,21 +752,19 @@ static void managecycle(void *ptr){
         //cycle_diff=CYCLE_STEP_MAX;
         if(weighted_dc > objective_dc){
           temp_cycle = cycle_time+cycle_diff;
-          count_up+=1;
-          count_down=0;
+
           if(temp_cycle > CYCLE_MAX){
             temp_cycle=CYCLE_MAX;
           }
         }
         else{
           temp_cycle = cycle_time-cycle_diff;
-          count_down+=1;
-          count_up=0;
           if(temp_cycle < CYCLE_MIN){
             temp_cycle=CYCLE_MIN;
           }
         }
         cycle_time=temp_cycle;
+        cycle_time_avg=cycle_time+cycle_time_avg;
       }
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
@@ -765,7 +772,6 @@ static void managecycle(void *ptr){
       ORPL_LOG(" -> %lu (F)",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
       ORPL_LOG("\n");
-
    //ORPL_LOG("\n");
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
@@ -783,50 +789,48 @@ static void managecycle(void *ptr){
 #endif
     ctimer_reset(&ct_check);
 #if COLLECT_ONLY
+    //packet_count_total=(packet_count_current + ((uint32_t)cpt) * packet_count_total)/(uint32_t)(cpt+1);
+//      if(count_down==1 || count_up==1)
+//      {
+//        packet_count_prev=packet_count_avg;
+//        ctimer_set(&ct_balance, LB_DATAPERIOD,
+//                     (void (*)(void *))checkBalance, NULL);
+//      }
 
+//      if(cpt>5){//wait 10 min before sending packets (=5periods)
+//        //period_count+=1;
+//        //we use avg because we don't check at constant interval
+//        //packet_count_avg=(uint16_t)100ul*packet_count_current/period_count;
+//        //packet_count_avg=(packet_count_current*1000ul + ((uint32_t)cpt-6) * packet_count_avg)/(uint32_t)(cpt-6+1);
+//
+//        packet_count_current=0;
+//
+//      }
 
-      if(count_down==1 || count_up==1)
-      {
-        packet_count_current=0;
-        packet_count_prev=packet_count_avg;
-        period_count=0;
-      }
+      if(cpt%5 ==0){
+        cycle_time_avg=cycle_time_avg/5;
+        packet_count_avg=(packet_count_current*100)/5;
+        ORPL_LOG("check_temp: %u - %u - %u  (%u) -%lu",packet_count_prev,packet_count_avg,packet_count_current,cpt,(unsigned long) (cycle_time_avg*1000/RTIMER_ARCH_SECOND));
+        if(cpt==15){//30 minutes --> 10 minutes LB
+          //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
+          if((packet_count_avg >= packet_count_prev && cycle_time_avg > CONTIKIMAC_CONF_CYCLE_TIME + CYCLE_MIN*2) || (packet_count_avg <= packet_count_prev  && cycle_time_avg < CONTIKIMAC_CONF_CYCLE_TIME - CYCLE_MIN*2)){
+            cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
 
-      if(cpt>5){//wait 10 min before sending packets (=4periods)
-        period_count+=1;
-        //we use avg because we don't check at constant interval
-        packet_count_avg=(uint16_t)100ul*packet_count_current/period_count;
-      }
-
-      ORPL_LOG("check_temp: / %u - %u - %u (%u-%u-%u)\n",packet_count_prev,packet_count_avg,packet_count_current,count_up, count_down,period_count);
-
-      if((count_up %5==0 && count_up !=0) || (count_down !=0 && count_down%5==0))
-      {
-        ORPL_LOG("check_dis: %u-%u",packet_count_prev,packet_count_avg);
-        //after 5 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
-        if((packet_count_avg >= packet_count_prev && CYCLE_TIME > CONTIKIMAC_CONF_CYCLE_TIME + CYCLE_MIN) || (packet_count_avg <= packet_count_prev  && CYCLE_TIME < CONTIKIMAC_CONF_CYCLE_TIME - CYCLE_MIN)){
-          cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-          //if after two tentatives the fw count doesn't change we disable loadbalancing
-          ORPL_LOG(" [BACK]\n");
-          packet_count_current=0;
-          packet_count_prev=packet_count_avg;
-          period_count=0;
-          if(count_up/5>=2 || count_down/5>=2){// after two disable we disable load balancing
+            ORPL_LOG(" [KO]\n");
             setLoadBalancing(0);
           }
-        }
-
-        else{
-          if(count_up>0){
-            count_up=0;
-          }
           else{
-            count_down=0;
+            ORPL_LOG(" [OK]\n");
           }
-
-          ORPL_LOG("\n");
         }
+        cycle_time_avg=0;
+        packet_count_current=0;
+        packet_count_prev=packet_count_avg;
+
       }
+
+
+
 
 
 

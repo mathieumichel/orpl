@@ -13,4 +13,5 @@ extern uint32_t cycle_time;
 extern uint16_t periodic_tx_dc;
 extern uint16_t periodic_dc;
 #endif
+
 #endif /* CONTIKIMAC_ORPL_H_ */
