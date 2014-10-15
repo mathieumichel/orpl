@@ -764,13 +764,14 @@ static void managecycle(void *ptr){
           }
         }
         cycle_time=temp_cycle;
-        cycle_time_avg=cycle_time+cycle_time_avg;
+
       }
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
     else{
       ORPL_LOG(" -> %lu (F)",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
+    cycle_time_avg+=cycle_time;
       ORPL_LOG("\n");
    //ORPL_LOG("\n");
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
@@ -822,6 +823,10 @@ static void managecycle(void *ptr){
           else{
             ORPL_LOG(" [OK]\n");
           }
+        }
+        else
+        {
+          ORPL_LOG("\n");
         }
         cycle_time_avg=0;
         packet_count_current=0;
