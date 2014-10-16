@@ -166,43 +166,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {
-//      if(dead){
-//        //printf("dying\n");
-//        PROCESS_EXIT();
-//      }
-#if WITH_VARIABLE_TXRATE
-      compteur+=1;
-      printf("App: plop %u\n",compteur);
-      if (compteur >= 11 && compteur < 15){
-          etimer_set(&send_timer, random_rand() % (SEND_INTERVAL/3));
-          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-          if(orpl_current_edc() != 0xffff) {
-            app_send_to(ROOT_ID);
-          } else {
-            printf("App: not in DODAG\n");
-          }
-          etimer_set(&send_timer,(SEND_INTERVAL/3));
-          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-          etimer_set(&send_timer, random_rand() % (SEND_INTERVAL/3));
-          PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-          if(orpl_current_edc() != 0xffff) {
-            app_send_to(ROOT_ID);
-          } else {
-            printf("App: not in DODAG\n");
-          }
 
-      }
-      else{
-        etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
-        PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-        if(default_instance != NULL) {
-        
-          app_send_to(ROOT_ID);
-        } else {
-          printf("App: not in DODAG\n");
-        }
-      }
-#else
       etimer_set(&send_timer, random_rand() % (SEND_INTERVAL));
       PROCESS_WAIT_UNTIL(etimer_expired(&send_timer));
        
@@ -216,8 +180,6 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
       } else {
        printf("App: not in DODAG\n");
       }
- 	
-#endif
       PROCESS_WAIT_UNTIL(etimer_expired(&periodic_timer));
       etimer_reset(&periodic_timer);
     }

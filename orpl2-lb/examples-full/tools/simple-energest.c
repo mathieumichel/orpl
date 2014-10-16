@@ -49,6 +49,7 @@ static uint32_t curr_tx, curr_rx, curr_time;
 /*---------------------------------------------------------------------------*/
 void simple_energest_start() {
   energest_flush();
+
   last_tx = energest_type_time(ENERGEST_TYPE_TRANSMIT);
   last_rx = energest_type_time(ENERGEST_TYPE_LISTEN);
   last_time = energest_type_time(ENERGEST_TYPE_CPU) + energest_type_time(ENERGEST_TYPE_LPM);

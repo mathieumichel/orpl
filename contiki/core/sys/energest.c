@@ -101,6 +101,7 @@ energest_type_set(int type, unsigned long val)
 void
 energest_flush(void)
 {
+  printf("wasabi2\n");
   rtimer_clock_t now;
   int i;
   for(i = 0; i < ENERGEST_TYPE_MAX; i++) {
