@@ -79,15 +79,17 @@
 
 
  //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_PERIOD 20*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_PERIOD 120*60*CLOCK_SECOND //guard timer before starting load balancing
 #define DUTY_CYCLE_TARGET   0.70
 
 #if NEW_MODE
-#define DC_ALPHA 0.75 //has to be bigger given check is now for ten min
-#define LB_CHECK_PERIOD 10*60*CLOCK_SECOND
+#define DC_ALPHA 0.25 //has to be bigger given check is now for ten min
+#define LB_CHECK_PERIOD 2*60*CLOCK_SECOND
+#define RESET_CHECK_PERIOD 10*60*CLOCK_SECOND
+uint8_t alpha_reset= 10;//to be ddivides by ten
 #define CYCLE_MAX  (1000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
-#define CYCLE_STEP_MAX (CYCLE_TIME)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
+#define CYCLE_STEP_MAX (CYCLE_MIN)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
 #else
 #define DC_ALPHA 0.25
 #define LB_CHECK_PERIOD 2*60*CLOCK_SECOND
@@ -102,14 +104,15 @@
 #if WITH_ENERGY_THRESHOLD
 static uint32_t total_dc_spent;
 extern uint8_t dead;//use to signal at the app that the node is down
-#define ENERGY_THRESHOLD 1200 //when the total duty-cycle-spent is higher than this thrshold the node dies
+#define ENERGY_THRESHOLD 1500 //when the total duty-cycle-spent is higher than this thrshold the node dies
 #endif /* WITH_ENERGY_THRESHOLD */
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-uint32_t cycle_time_avg, cycle_time_prev;
+uint32_t cycle_time_prev,cycle_time_avg,cycle_time_sum;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
+
 #endif /*CONTIKIMAC_CONF_CYCLE_TIME*/
 static struct ctimer ct_check;//timer used to manage the cycle
 static struct ctimer ct_guard; //timer used for the guard_time
@@ -733,32 +736,8 @@ static void managecycle(void *ptr){
 
     if(loadbalancing_is_on){
 
-#if COLLECT_ONLY
-
-      if(cpt > 1){
-        ORPL_LOG("/ %u - %u",packet_count_prev,packet_count_current);
-          //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
-          if(packet_count_current >= packet_count_prev && cycle_time> cycle_time_prev) {
-
-            ORPL_LOG(" [KO]");
-          }
-          else if(packet_count_current <= packet_count_prev && cycle_time< cycle_time_prev){
-            ORPL_LOG(" [KO]");
-          }
-          else{
-            ORPL_LOG(" [OK]");
-          }
-      }
-        packet_count_prev=packet_count_current;
-        packet_count_current=0;
-
-#endif
-
       if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS)
       {
-
-
-
         uint32_t temp_cycle;
         uint16_t weight=0;//the weight must be defined based on the current duty-cycle
         uint32_t cycle_diff;
@@ -772,7 +751,7 @@ static void managecycle(void *ptr){
         if(weight > 100){
           weight=100;
         }
-        cycle_diff= (CYCLE_STEP_MAX/100ul)*weight;
+        cycle_diff= (((CYCLE_STEP_MAX/100ul) * weight) * alpha_reset)/10;
         //cycle_diff=CYCLE_STEP_MAX;
         if(weighted_dc > objective_dc){
           temp_cycle = cycle_time+cycle_diff;
@@ -787,18 +766,44 @@ static void managecycle(void *ptr){
             temp_cycle=CYCLE_MIN;
           }
         }
-        cycle_time_prev=cycle_time;
         cycle_time=temp_cycle;
-
+      }
+#if COLLECT_ONLY
+      if(cpt > 0 && (cpt+1)%5==0){
+        cycle_time_avg=cycle_time_sum/5;
+        if(cycle_time_avg==0){
+          cycle_time_avg=500;
+        }
+        ORPL_LOG("/ %u - %u | %lu - %lu",packet_count_prev,packet_count_current,cycle_time_prev,cycle_time_avg);
+        //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
+        if(cpt > 10)
+        {
+          if((packet_count_current >= packet_count_prev && cycle_time_avg> cycle_time_prev) || (packet_count_current <= packet_count_prev && cycle_time_avg< cycle_time_prev)) {
+            cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
+            weighted_dc=objective_dc;
+            //alpha_reset-=1;
+            ORPL_LOG(" [KO]");
+          }
+          else{
+            alpha_reset=10;
+            ORPL_LOG(" [OK]");
+          }
+        }
+        cycle_time_prev=cycle_time_avg;
+        cycle_time_sum=0;
+        packet_count_prev=packet_count_current;
+        packet_count_current=0;
       }
 
-
+#endif
+      cycle_time_sum+=(cycle_time* 1000/RTIMER_ARCH_SECOND);
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
     else{
       ORPL_LOG(" -> %lu (F)",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
-    //cycle_time_avg+=cycle_time;
+
+
     ORPL_LOG("\n");
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
