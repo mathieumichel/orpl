@@ -79,13 +79,13 @@
 
 
  //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_PERIOD 120*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_PERIOD 20*60*CLOCK_SECOND //guard timer before starting load balancing
 #define DUTY_CYCLE_TARGET   0.70
 
 #if NEW_MODE
 #define DC_ALPHA 0.25 //has to be bigger given check is now for ten min
 #define LB_CHECK_PERIOD 2*60*CLOCK_SECOND
-#define RESET_CHECK_PERIOD 10*60*CLOCK_SECOND
+#define RESET_CHECK_PERIOD 20*60*CLOCK_SECOND
 uint8_t alpha_reset= 10;//to be ddivides by ten
 #define CYCLE_MAX  (1000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
@@ -121,7 +121,7 @@ static uint32_t curr_tx, curr_rx, curr_time;
 
 static uint32_t delta_tx, delta_rx, delta_time;
 #if COLLECT_ONLY
-uint16_t packet_count_total, packet_count_current, packet_count_prev;
+uint32_t packet_count_total, packet_count_current, packet_count_avg, packet_count_prev;
 #endif
 uint16_t periodic_dc, objective_dc, weighted_dc, averaged_dc;
 #if WITH_ORPL_LB_DIO_TARGET
@@ -666,7 +666,6 @@ static void setLoadBalancing(int mode){
 #if CHANGE_STROBE_TIME
       default_strobe_time=CYCLE_MAX;//initialized at CYCLE_TIME
 #endif
-      //packet_count_prev=packet_count_avg;
     }
     else{
       ORPL_LOG("ORPL_LB OFF\n");
@@ -729,6 +728,7 @@ static void managecycle(void *ptr){
     }
 
     averaged_dc=(periodic_dc + ((uint32_t)cpt) * averaged_dc)/(uint32_t)(cpt+1);//averaged DC since beginning
+    packet_count_avg=(packet_count_current + ((uint32_t)cpt) * packet_count_avg)/(uint32_t)(cpt+1);
 
     weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
 
@@ -778,20 +778,22 @@ static void managecycle(void *ptr){
         //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
         if(cpt > 10)
         {
-          if((packet_count_current >= packet_count_prev && cycle_time_avg> cycle_time_prev) || (packet_count_current <= packet_count_prev && cycle_time_avg< cycle_time_prev)) {
+          if((packet_count_avg >= packet_count_prev && cycle_time_avg> cycle_time_prev) || (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev)) {
             cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-            weighted_dc=objective_dc;
+            //weighted_dc=objective_dc;
             //alpha_reset-=1;
             ORPL_LOG(" [KO]");
+            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
           }
           else{
             alpha_reset=10;
             ORPL_LOG(" [OK]");
+            cycle_time_prev=cycle_time_avg;
           }
         }
         cycle_time_prev=cycle_time_avg;
         cycle_time_sum=0;
-        packet_count_prev=packet_count_current;
+        packet_count_prev=packet_count_avg;
         packet_count_current=0;
       }
 
