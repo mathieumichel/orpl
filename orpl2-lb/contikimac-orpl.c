@@ -79,13 +79,12 @@
 
 
  //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_PERIOD 20*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_PERIOD 10*60*CLOCK_SECOND //guard timer before starting load balancing
 #define DUTY_CYCLE_TARGET   0.70
 
 #if NEW_MODE
 #define DC_ALPHA 0.25 //has to be bigger given check is now for ten min
 #define LB_CHECK_PERIOD 2*60*CLOCK_SECOND
-#define RESET_CHECK_PERIOD 20*60*CLOCK_SECOND
 uint8_t alpha_reset= 10;//to be ddivides by ten
 #define CYCLE_MAX  (1000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
@@ -728,12 +727,14 @@ static void managecycle(void *ptr){
     }
 
     averaged_dc=(periodic_dc + ((uint32_t)cpt) * averaged_dc)/(uint32_t)(cpt+1);//averaged DC since beginning
-    packet_count_avg=(packet_count_current + ((uint32_t)cpt) * packet_count_avg)/(uint32_t)(cpt+1);
-
+    //cycle_time_avg=((cycle_time* 1000/RTIMER_ARCH_SECOND) + ((uint32_t)cpt) * cycle_time_avg)/(uint32_t)(cpt+1);
     weighted_dc=(uint16_t)((DC_ALPHA*100ul*periodic_dc + (1*100ul-DC_ALPHA*100ul)*weighted_dc)/100ul);
-
+    if(cpt>=5)
+    {
+      packet_count_avg=(packet_count_current*100 + ((uint32_t)cpt-5) * packet_count_avg)/(uint32_t)(cpt-5+1);//*100 pour éviter arrondi, moyenne pour évtier écart du début
+      packet_count_current=0;
+    }
     ORPL_LOG("ORPL_LB: %u - %u - %u",periodic_dc,weighted_dc,averaged_dc);
-
     if(loadbalancing_is_on){
 
       if(averaged_dc > objective_dc + HYSTERESIS || averaged_dc < objective_dc - HYSTERESIS)
@@ -751,7 +752,7 @@ static void managecycle(void *ptr){
         if(weight > 100){
           weight=100;
         }
-        cycle_diff= (((CYCLE_STEP_MAX/100ul) * weight) * alpha_reset)/10;
+        cycle_diff= ((CYCLE_STEP_MAX/100ul) * weight);
         //cycle_diff=CYCLE_STEP_MAX;
         if(weighted_dc > objective_dc){
           temp_cycle = cycle_time+cycle_diff;
@@ -769,36 +770,38 @@ static void managecycle(void *ptr){
         cycle_time=temp_cycle;
       }
 #if COLLECT_ONLY
-      if(cpt > 0 && (cpt+1)%5==0){
-        cycle_time_avg=cycle_time_sum/5;
-        if(cycle_time_avg==0){
-          cycle_time_avg=500;
-        }
-        ORPL_LOG("/ %u - %u | %lu - %lu",packet_count_prev,packet_count_current,cycle_time_prev,cycle_time_avg);
+      if(cpt > 0 && (cpt+1)%10==0){
+
+        cycle_time_avg=cycle_time_sum/10ul;
+        ORPL_LOG("/ %lu - %lu | %lu - %lu",packet_count_prev,packet_count_avg,cycle_time_prev,cycle_time_avg);
         //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
-        if(cpt > 10)
+        if(cpt+1 >10)
         {
-          if((packet_count_avg >= packet_count_prev && cycle_time_avg> cycle_time_prev) || (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev)) {
-            cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-            //weighted_dc=objective_dc;
-            //alpha_reset-=1;
+          if(packet_count_avg >= packet_count_prev && cycle_time_avg> cycle_time_prev && cycle_time_avg > CONTIKIMAC_CONF_CYCLE_TIME*1000/RTIMER_ARCH_SECOND)
+          {
             ORPL_LOG(" [KO]");
-            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
+            cycle_time=(cycle_time_avg*RTIMER_ARCH_SECOND/1000)-(((cycle_time_avg*RTIMER_ARCH_SECOND)/1000) - CONTIKIMAC_CONF_CYCLE_TIME)/2;
           }
+          else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev && cycle_time_avg < CONTIKIMAC_CONF_CYCLE_TIME*1000/RTIMER_ARCH_SECOND)
+          {
+            ORPL_LOG(" [KO]");
+            cycle_time=(cycle_time_avg*RTIMER_ARCH_SECOND/1000)+(CONTIKIMAC_CONF_CYCLE_TIME-((cycle_time_avg*RTIMER_ARCH_SECOND)/1000))/2;
+          }
+
           else{
-            alpha_reset=10;
             ORPL_LOG(" [OK]");
-            cycle_time_prev=cycle_time_avg;
           }
+
         }
         cycle_time_prev=cycle_time_avg;
-        cycle_time_sum=0;
         packet_count_prev=packet_count_avg;
-        packet_count_current=0;
+
+        cycle_time_sum=0;
+
       }
 
 #endif
-      cycle_time_sum+=(cycle_time* 1000/RTIMER_ARCH_SECOND);
+
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
     else{
@@ -806,6 +809,7 @@ static void managecycle(void *ptr){
     }
 
 
+    cycle_time_sum+=(cycle_time* 1000/RTIMER_ARCH_SECOND);
     ORPL_LOG("\n");
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
