@@ -777,15 +777,15 @@ static void managecycle(void *ptr){
         //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
         if(cpt+1 >10)
         {
-          if(packet_count_avg >= packet_count_prev && cycle_time_avg> cycle_time_prev && cycle_time_avg > CONTIKIMAC_CONF_CYCLE_TIME*1000/RTIMER_ARCH_SECOND)
+          if(packet_count_avg >= packet_count_prev && cycle_time_avg> cycle_time_prev && cycle_time_avg > 500)
           {
             ORPL_LOG(" [KO]");
-            cycle_time=(cycle_time_avg*RTIMER_ARCH_SECOND/1000)-(((cycle_time_avg*RTIMER_ARCH_SECOND)/1000) - CONTIKIMAC_CONF_CYCLE_TIME)/2;
+            cycle_time=((cycle_time_avg)-(cycle_time_avg - 500)/2)*RTIMER_ARCH_SECOND/1000;
           }
-          else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev && cycle_time_avg < CONTIKIMAC_CONF_CYCLE_TIME*1000/RTIMER_ARCH_SECOND)
+          else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev && cycle_time_avg < 500)
           {
             ORPL_LOG(" [KO]");
-            cycle_time=(cycle_time_avg*RTIMER_ARCH_SECOND/1000)+(CONTIKIMAC_CONF_CYCLE_TIME-((cycle_time_avg*RTIMER_ARCH_SECOND)/1000))/2;
+            cycle_time=((cycle_time_avg)+(500-cycle_time_avg)/2)*RTIMER_ARCH_SECOND/1000;
           }
 
           else{
