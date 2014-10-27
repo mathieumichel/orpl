@@ -103,7 +103,7 @@ uint8_t alpha_reset= 10;//to be ddivides by ten
 #if WITH_ENERGY_THRESHOLD
 static uint32_t total_dc_spent;
 extern uint8_t dead;//use to signal at the app that the node is down
-#define ENERGY_THRESHOLD 1500 //when the total duty-cycle-spent is higher than this thrshold the node dies
+#define ENERGY_THRESHOLD 1000 //when the total duty-cycle-spent is higher than this thrshold the node dies
 #endif /* WITH_ENERGY_THRESHOLD */
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
@@ -694,14 +694,16 @@ static void managecycle(void *ptr){
     last_time = curr_time;
 
 #if WITH_ENERGY_THRESHOLD
-    total_dc_spent=total_dc_spent+(delta_tx+delta_rx)/1000ul;
-    ORPL_LOG("ORPL_LB: energy : %lu-%lu\n",total_dc_spent, curr_tx+curr_rx );
-    if(total_dc_spent > ENERGY_THRESHOLD){
-      NETSTACK_RDC.off(0);//don't keep the radio on
-      NETSTACK_MAC.off(0);
-      ORPL_LOG("ORPL_LB: DEAD!!!!!!!!!\n");
-      dead=1;
-      return;
+    if(cpt>=5){//avoid some disparity at the beginning (LB enabled after 10 minutes anyway)
+      total_dc_spent=total_dc_spent+(delta_tx+delta_rx)/1000ul;
+      ORPL_LOG("ORPL_LB: energy : %lu-%lu\n",total_dc_spent, curr_tx+curr_rx );
+      if(total_dc_spent > ENERGY_THRESHOLD){
+        NETSTACK_RDC.off(0);//don't keep the radio on
+        NETSTACK_MAC.off(0);
+        ORPL_LOG("ORPL_LB: DEAD!!!!!!!!!\n");
+        dead=1;
+        return;
+      }
     }
 #endif /* WITH_ENERGY_THRESHOLD */
 
