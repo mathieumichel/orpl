@@ -108,7 +108,9 @@ extern uint8_t dead;//use to signal at the app that the node is down
 
 #ifdef CONTIKIMAC_CONF_CYCLE_TIME
 uint32_t cycle_time=CONTIKIMAC_CONF_CYCLE_TIME;
-uint32_t cycle_time_prev,cycle_time_avg,cycle_time_sum;
+uint32_t cycle_time_prev,cycle_time_avg;
+uint32_t cycle_time_sum=500;
+uint32_t duty_avg, duty_sum, duty_prev;
 #else /*CONTIKIMAC_CONF_CYCLE_TIME*/
 uint32_t cycle_time=RTIMER_ARCH_SECOND / NETSTACK_RDC_CHANNEL_CHECK_RATE
 
@@ -123,6 +125,8 @@ static uint32_t delta_tx, delta_rx, delta_time;
 uint32_t packet_count_total, packet_count_current, packet_count_avg, packet_count_prev;
 #endif
 uint16_t periodic_dc, objective_dc, weighted_dc, averaged_dc;
+
+uint16_t periodic_tx_dc=0;
 #if WITH_ORPL_LB_DIO_TARGET
 uint16_t periodic_tx_dc=0;
 #endif
@@ -695,9 +699,9 @@ static void managecycle(void *ptr){
 
 #if WITH_ENERGY_THRESHOLD
     if(cpt>=5){//avoid some disparity at the beginning (LB enabled after 10 minutes anyway)
-      total_dc_spent=total_dc_spent+(delta_tx+delta_rx)/1000ul;
-      ORPL_LOG("ORPL_LB: energy : %lu-%lu\n",total_dc_spent, curr_tx+curr_rx );
-      if(total_dc_spent > ENERGY_THRESHOLD){
+      total_dc_spent=total_dc_spent+(delta_tx+delta_rx)/100ul;
+      ORPL_LOG("ORPL_LB: energy : %lu-%lu\n",total_dc_spent, delta_tx+delta_rx );
+      if(total_dc_spent > ENERGY_THRESHOLD*10){
         NETSTACK_RDC.off(0);//don't keep the radio on
         NETSTACK_MAC.off(0);
         ORPL_LOG("ORPL_LB: DEAD!!!!!!!!!\n");
@@ -709,7 +713,9 @@ static void managecycle(void *ptr){
 
 
     periodic_dc = (uint16_t)((10ul * (delta_tx+delta_rx))/(delta_time/1000ul));
-
+    //periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
+    duty_sum+=delta_tx;
+   // printf("plop %u-%u\n",periodic_tx_dc, duty_sum);
 #if WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB
     if(dio_dc_objective==0){
       objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
@@ -717,7 +723,7 @@ static void managecycle(void *ptr){
     else{
       objective_dc=dio_dc_objective;
     }
-    //periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
+    periodic_tx_dc = (uint16_t)((10ul * (delta_tx))/(delta_time/1000ul));
 #else /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
     objective_dc = (uint16_t)(DUTY_CYCLE_TARGET*100ul);
 #endif /*WITH_ORPL_LB_DIO_TARGET && WITH_ORPL_LB*/
@@ -772,22 +778,24 @@ static void managecycle(void *ptr){
         cycle_time=temp_cycle;
       }
 #if COLLECT_ONLY
-      if(cpt > 0 && (cpt+1)%10==0){
+      if(cpt > 0 && (cpt+1)%5==0){
 
-        cycle_time_avg=cycle_time_sum/10ul;
-        ORPL_LOG("/ %lu - %lu | %lu - %lu",packet_count_prev,packet_count_avg,cycle_time_prev,cycle_time_avg);
+        cycle_time_avg=cycle_time_sum/5ul;
+        duty_avg= duty_sum;///5;
+        //ORPL_LOG("/ %lu - %lu | %lu - %lu",packet_count_prev,packet_count_avg,cycle_time_prev,cycle_time_avg);
+        ORPL_LOG("/ %u - %u | %lu - %lu",duty_prev,duty_avg,cycle_time_prev,cycle_time_avg);
         //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
         if(cpt+1 >10)
         {
-          if(packet_count_avg >= packet_count_prev && cycle_time_avg> cycle_time_prev && cycle_time_avg > 500)
+          if(duty_avg>= duty_prev && cycle_time_avg > cycle_time_prev + cycle_time_prev/10 && cycle_time_avg > 750)
           {
             ORPL_LOG(" [KO]");
-            cycle_time=((cycle_time_avg)-(cycle_time_avg - 500)/2)*RTIMER_ARCH_SECOND/1000;
+            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
           }
-          else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev && cycle_time_avg < 500)
+          else if (duty_avg=duty_prev && cycle_time_avg < cycle_time_prev - cycle_time_prev/10 && cycle_time_avg < 250)
           {
             ORPL_LOG(" [KO]");
-            cycle_time=((cycle_time_avg)+(500-cycle_time_avg)/2)*RTIMER_ARCH_SECOND/1000;
+            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
           }
 
           else{
@@ -796,9 +804,12 @@ static void managecycle(void *ptr){
 
         }
         cycle_time_prev=cycle_time_avg;
+        duty_prev=duty_avg;
         packet_count_prev=packet_count_avg;
 
         cycle_time_sum=0;
+        duty_avg=0;
+        duty_sum=0;
 
       }
 
@@ -813,6 +824,7 @@ static void managecycle(void *ptr){
 
     cycle_time_sum+=(cycle_time* 1000/RTIMER_ARCH_SECOND);
     ORPL_LOG("\n");
+
     ORPL_LOG_NULL("Duty Cycle: [%u %u] %8lu +%8lu /%8lu (%lu)",
                   node_id,
                   cpt++,
