@@ -783,7 +783,7 @@ static void managecycle(void *ptr){
         cycle_time_avg=cycle_time_sum/5ul;
         duty_avg= duty_sum;///5;
         //ORPL_LOG("/ %lu - %lu | %lu - %lu",packet_count_prev,packet_count_avg,cycle_time_prev,cycle_time_avg);
-        ORPL_LOG("/ %u - %u | %lu - %lu",duty_prev,duty_avg,cycle_time_prev,cycle_time_avg);
+        ORPL_LOG("/ %lu - %lu | %lu - %lu",duty_prev,duty_avg,cycle_time_prev,cycle_time_avg);
         //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
         if(cpt+1 >10)
         {
@@ -792,7 +792,7 @@ static void managecycle(void *ptr){
             ORPL_LOG(" [KO]");
             cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
           }
-          else if (duty_avg=duty_prev && cycle_time_avg < cycle_time_prev - cycle_time_prev/10 && cycle_time_avg < 250)
+          else if (duty_avg<=duty_prev && cycle_time_avg < cycle_time_prev - cycle_time_prev/10 && cycle_time_avg < 250)
           {
             ORPL_LOG(" [KO]");
             cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
