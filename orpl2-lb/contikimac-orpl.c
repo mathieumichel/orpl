@@ -79,7 +79,7 @@
 
 
  //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_PERIOD 60*60*CLOCK_SECOND //guard timer before starting load balancing
+#define LB_GUARD_PERIOD 120*60*CLOCK_SECOND //guard timer before starting load balancing
 #define DUTY_CYCLE_TARGET   0.70
 
 #if NEW_MODE
@@ -121,7 +121,7 @@ static uint32_t curr_tx, curr_rx, curr_time;
 static uint32_t delta_tx, delta_rx, delta_time;
 #if COLLECT_ONLY
 uint32_t packet_count_total, packet_count_current, packet_count_avg, packet_count_prev;
-int last_move, curr_move;//0 =500, 1 >500, 2 <500
+int last_move, curr_move, since_LB_enabled;//0 =500, 1 >500, 2 <500
 #endif
 uint16_t periodic_dc, objective_dc, weighted_dc, averaged_dc;
 
@@ -784,74 +784,88 @@ static void managecycle(void *ptr){
         cycle_time=temp_cycle;
       }
 
-#if COLLECT_ONLY
+#if 0//COLLECT_ONLY
       if(cpt > 0 && (cpt+1)%5==0){
 
-        //cycle_time_avg=cycle_time_sum/5ul;
-        ORPL_LOG(" / %lu - %lu | %lu - %lu",packet_count_prev,packet_count_avg,cycle_time_prev,cycle_time_avg);
-        //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
-//        if(cpt+1 >10)
-//        {
-//          if(duty_avg>= duty_prev && cycle_time_avg > cycle_time_prev + cycle_time_prev/10 && cycle_time_prev > 750)
+        if(cycle_time_prev==0){//load balancing has just been enabled we don't have to go further
+          cycle_time_prev=cycle_time_avg;//CONTIKIMAC_CONF_CYCLE_TIME* 1000/RTIMER_ARCH_SECOND;
+          packet_count_prev=packet_count_avg;
+          last_move=0;
+        }
+
+        else{
+          ORPL_LOG(" / %lu - %lu | %lu - %lu",packet_count_prev,packet_count_avg,cycle_time_prev,cycle_time_avg);
+          //after 10 periods we check if the fw count has decreased (WI increased) or increased (WI decreased)
+          //        if(cpt+1 >10)
+          //        {
+          //          if(duty_avg>= duty_prev && cycle_time_avg > cycle_time_prev + cycle_time_prev/10 && cycle_time_prev > 750)
+          //          {
+          //            ORPL_LOG(" [KO]");
+          //            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
+          //          }
+          //          else if (duty_avg<=duty_prev && cycle_time_avg < cycle_time_prev - cycle_time_prev/10 && cycle_time_prev < 250)
+          //          {
+          //            ORPL_LOG(" [KO]");
+          //            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
+          //          }
+          //
+          //          else{
+          //            ORPL_LOG(" [OK]");
+          //            cycle_time_prev=cycle_time_avg;
+          //            duty_prev=duty_avg;
+          //            packet_count_prev=packet_count_avg;
+          //          }
+          //
+          //        }
+
+//          if(cpt+1 >10)// we don't want it starts as soon LB is on (wait at least 5 periods)
 //          {
-//            ORPL_LOG(" [KO]");
-//            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
+            if(cycle_time_avg > 500){
+              curr_move=1;
+            }
+            else if(cycle_time_avg < 500){
+              curr_move=2;
+            }
+            else{
+              curr_move=0;
+            }
+            if(last_move==curr_move || last_move==0){
+              if(packet_count_avg >= packet_count_prev  && cycle_time_avg> cycle_time_prev  + cycle_time_prev/10ul && cycle_time_avg> 750)
+              {
+                ORPL_LOG(" [KO]");
+                cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;//((cycle_time_avg)-(cycle_time_avg - 500)/2)*RTIMER_ARCH_SECOND/1000;
+              }
+              else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev - cycle_time_prev/10ul && cycle_time_avg < 250)
+              {
+                ORPL_LOG(" [KO]");
+                cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;//((cycle_time_avg)+(500-cycle_time_avg)/2)*RTIMER_ARCH_SECOND/1000;
+              }
+              else{
+                ORPL_LOG(" [OK]");
+
+                cycle_time_prev=cycle_time_avg;
+                packet_count_prev=packet_count_avg;
+              }
+            }
+
+            else{
+              ORPL_LOG(" [OK]");
+
+              cycle_time_prev=cycle_time_avg;
+              packet_count_prev=packet_count_avg;
+            }
+            last_move=curr_move;
 //          }
-//          else if (duty_avg<=duty_prev && cycle_time_avg < cycle_time_prev - cycle_time_prev/10 && cycle_time_prev < 250)
-//          {
-//            ORPL_LOG(" [KO]");
-//            cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;
-//          }
-//
 //          else{
-//            ORPL_LOG(" [OK]");
 //            cycle_time_prev=cycle_time_avg;
-//            duty_prev=duty_avg;
 //            packet_count_prev=packet_count_avg;
 //          }
-//
-//        }
-
-        if(cpt+1 >10)
-        {
-          if(cycle_time_avg > 500){
-            curr_move=1;
-          }
-          else if(cycle_time_avg < 500){
-            curr_move=2;
-          }
-          else{
-            curr_move=0;
-          }
-          if(last_move==curr_move || last_move==0){
-            if(packet_count_avg >= packet_count_prev  && cycle_time_avg> cycle_time_prev  + cycle_time_prev/10ul && cycle_time_avg> 750)
-            {
-              ORPL_LOG(" [KO]");
-              cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;//((cycle_time_avg)-(cycle_time_avg - 500)/2)*RTIMER_ARCH_SECOND/1000;
-            }
-            else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev - cycle_time_prev/10ul && cycle_time_avg < 250)
-            {
-              ORPL_LOG(" [KO]");
-              cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;//((cycle_time_avg)+(500-cycle_time_avg)/2)*RTIMER_ARCH_SECOND/1000;
-            }
-          }
-
-          else{
-            ORPL_LOG(" [OK]");
-
-            cycle_time_prev=cycle_time_avg;
-            packet_count_prev=packet_count_avg;
-          }
-          last_move=curr_move;
-        }
-        else{
-          cycle_time_prev=cycle_time_avg;
-          packet_count_prev=packet_count_avg;
         }
 
       }
 
 #endif
+
 
       ORPL_LOG(" -> %lu",(unsigned long)(CYCLE_TIME* 1000/RTIMER_ARCH_SECOND));
     }
