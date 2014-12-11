@@ -36,7 +36,7 @@
 
 #define WITH_ORPL 1
 #define COLLECT_ONLY 1 //used for adapt logging to require less memory
-#define WITH_ENERGY_THRESHOLD 1
+#define WITH_ENERGY_THRESHOLD 0
 
 
 /* The IEEE 802.15.4 channel in use */

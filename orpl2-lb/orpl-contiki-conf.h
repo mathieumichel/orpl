@@ -63,7 +63,7 @@
 
 #endif /*WITH_ORPL*/
 
-#define WITH_ORPL_LOADCTRL 0
+#define WITH_ORPL_LOADCTRL1
 #ifdef WITH_ORPL_LOADCTRL
 #define QUEUEBUF_CONF_STATS 1
 #endif

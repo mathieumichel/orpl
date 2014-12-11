@@ -79,8 +79,8 @@
 
 
  //period between two checks (used with ctimer) based on the sending rate
-#define LB_GUARD_PERIOD 120*60*CLOCK_SECOND //guard timer before starting load balancing
-#define DUTY_CYCLE_TARGET   0.70
+#define LB_GUARD_PERIOD 60*60*CLOCK_SECOND //guard timer before starting load balancing
+#define DUTY_CYCLE_TARGET   0.75
 
 #if NEW_MODE
 #define DC_ALPHA 0.25 //has to be bigger given check is now for ten min
@@ -784,7 +784,7 @@ static void managecycle(void *ptr){
         cycle_time=temp_cycle;
       }
 
-#if 0//COLLECT_ONLY
+#if COLLECT_ONLY
       if(cpt > 0 && (cpt+1)%5==0){
 
         if(cycle_time_prev==0){//load balancing has just been enabled we don't have to go further
@@ -830,12 +830,12 @@ static void managecycle(void *ptr){
               curr_move=0;
             }
             if(last_move==curr_move || last_move==0){
-              if(packet_count_avg >= packet_count_prev  && cycle_time_avg> cycle_time_prev  + cycle_time_prev/10ul && cycle_time_avg> 750)
+              if(packet_count_avg >= packet_count_prev  && cycle_time_avg> cycle_time_prev  + cycle_time_prev/10ul && cycle_time_avg> 550)
               {
                 ORPL_LOG(" [KO]");
                 cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;//((cycle_time_avg)-(cycle_time_avg - 500)/2)*RTIMER_ARCH_SECOND/1000;
               }
-              else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev - cycle_time_prev/10ul && cycle_time_avg < 250)
+              else if (packet_count_avg <= packet_count_prev && cycle_time_avg< cycle_time_prev - cycle_time_prev/10ul && cycle_time_avg < 450)
               {
                 ORPL_LOG(" [KO]");
                 cycle_time=cycle_time_prev*RTIMER_ARCH_SECOND/1000;//((cycle_time_avg)+(500-cycle_time_avg)/2)*RTIMER_ARCH_SECOND/1000;
