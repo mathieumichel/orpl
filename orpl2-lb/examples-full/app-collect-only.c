@@ -54,7 +54,7 @@ static uint16_t compteur=2;
 #endif
 
 #if WITH_ORPL_LOADCTRL
-#define SEND_INTERVAL   (1 * 10 * CLOCK_SECOND)
+#define SEND_INTERVAL   (1 * 15 * CLOCK_SECOND)
 #else
 #define SEND_INTERVAL   (2 * 60 * CLOCK_SECOND)
 #endif
@@ -158,11 +158,8 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
 #endif
     NETSTACK_RDC.off(1);
   } else {
-#if WITH_ORPL_LOADCTRL
-    etimer_set(&periodic_timer, 2 * 60 * CLOCK_SECOND);
-#else
-    etimer_set(&periodic_timer, 10 * 60 * CLOCK_SECOND);
-#endif
+
+    etimer_set(&periodic_timer,10  * 60 * CLOCK_SECOND);
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(1) {

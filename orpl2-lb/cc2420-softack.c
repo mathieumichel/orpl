@@ -42,7 +42,7 @@
 #endif
 
 #include "dev/leds.h"
-#include "dev/spi.h"IFOP
+#include "dev/spi.h"
 #include "dev/cc2420.h"
 #include "dev/cc2420_const.h"
 #include "cc2420-softack.h"
@@ -58,6 +58,7 @@
 #include "sys/timetable.h"
 
 #if WITH_ORPL
+
 
 volatile int need_flush;
 extern volatile uint8_t contikimac_keep_radio_on;

@@ -57,13 +57,13 @@
 
 
 #else /*WITH_ORPL*/
-#define WITH_ORPL_LB 0
+#define WITH_ORPL_LB 1
 #define WITH_ORPL_LB_DIO_TARGET 0
 #define WITH_VARIABLE_TXRATE 0
 
 #endif /*WITH_ORPL*/
 
-#define WITH_ORPL_LOADCTRL1
+#define WITH_ORPL_LOADCTRL 1
 #ifdef WITH_ORPL_LOADCTRL
 #define QUEUEBUF_CONF_STATS 1
 #endif

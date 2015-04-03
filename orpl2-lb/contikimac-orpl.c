@@ -80,12 +80,11 @@
 
  //period between two checks (used with ctimer) based on the sending rate
 #define LB_GUARD_PERIOD 60*60*CLOCK_SECOND //guard timer before starting load balancing
-#define DUTY_CYCLE_TARGET   0.75
+#define DUTY_CYCLE_TARGET   3.50 //(1.75 for 30s)
 
 #if NEW_MODE
 #define DC_ALPHA 0.25 //has to be bigger given check is now for ten min
 #define LB_CHECK_PERIOD 2*60*CLOCK_SECOND
-uint8_t alpha_reset= 10;//to be ddivides by ten
 #define CYCLE_MAX  (1000 * RTIMER_ARCH_SECOND/1000) // wake-up interval sup bound
 #define CYCLE_MIN (125 * RTIMER_ARCH_SECOND/1000) // wake-up interval min bound
 #define CYCLE_STEP_MAX (CYCLE_MIN)//we don't want to move too fast (related to transmission rate (4m = /2 --- 2m = /4)
@@ -219,7 +218,7 @@ static int we_are_receiving_burst = 0;
 /* INTER_PACKET_DEADLINE is the maximum time a receiver waits for the
    next packet of a burst when FRAME_PENDING is set. */
 #if WITH_BURST
-#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 32 // prev =32
+#define INTER_PACKET_DEADLINE               CLOCK_SECOND / 10 // prev =32
 #else
 #define INTER_PACKET_DEADLINE               CLOCK_SECOND / 32  // prev =32
 #endif
@@ -740,7 +739,7 @@ static void managecycle(void *ptr){
     ORPL_LOG("ORPL_LB: %u - %u - %u / %u",periodic_dc,weighted_dc,averaged_dc,packet_count_current);
     if(cpt>=5)
     {
-      packet_count_avg=(packet_count_current*100 + ((uint32_t)cpt-5) * packet_count_avg)/(uint32_t)(cpt-5+1);//*100 pour éviter arrondi, moyenne pour évtier écart du début
+      packet_count_avg=(packet_count_current*100 + ((uint32_t)cpt-5) * packet_count_avg)/(uint32_t)(cpt-5+1);//*100 pour éviter arrondi, moyenne pour éviter écart du début, -5 car rien transmis pendant 10 min
       packet_count_current=0;
     }
     cycle_time_sum+=(uint32_t)(cycle_time* 1000/RTIMER_ARCH_SECOND);
@@ -1103,7 +1102,7 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
     /* Check if there are any transmissions by others. */
     /* TODO: why does this give collisions before sending with the mc1322x? */
 #if WITH_BURST
-  if(1==1){
+  if(0 == 0){
 #else /* WITH_BURST */
   if(is_receiver_awake == 0) {
 #endif /* WITH_BURST */
@@ -1239,8 +1238,8 @@ send_packet(mac_callback_t mac_callback, void *mac_callback_ptr,
             }
           }
         }
-#if WITH_BURST
-        else {
+#if WITH_ORPL_LOADCTRL
+        else if(!is_broadcast) {
          collisions++;
                 }
 #endif
@@ -1406,7 +1405,7 @@ qsend_list(mac_callback_t sent, void *ptr, struct rdc_buf_list *buf_list)
         /* We're in a burst, no need to wake the receiver up again */
         is_receiver_awake = 1;
         curr = next;
-        //ORPL_LOG("burst\n");
+        ORPL_LOG("burst\n");
       }
     } else {
       /* The transmission failed, we stop the burst */
@@ -1509,8 +1508,8 @@ input_packet(void)
         //radio_is_on=1;
         /* Set a timer to turn the radio off in case we do not receive
 	   a next packet */
-        ctimer_set(&ct, CLOCK_SECOND/32, wait_burst, NULL);
-        //ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
+        //ctimer_set(&ct, CLOCK_SECOND/32, wait_burst, NULL);
+        ctimer_set(&ct, INTER_PACKET_DEADLINE, recv_burst_off, NULL);
       } else {
         off();
         ctimer_stop(&ct);

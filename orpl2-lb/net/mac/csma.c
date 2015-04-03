@@ -53,9 +53,9 @@
 
 #if WITH_ORPL_LOADCTRL
 #define CSMA_ADVANCED 1  //only for collect_only
+extern uint8_t queuebuf_len;
 #else
 #define CSMA_ADVANCED 1
-extern uint8_t queuebuf_len;
 #endif
 #if WITH_ORPL
 #include "net/uip.h"
@@ -262,9 +262,6 @@ packet_sent(void *ptr, int status, int num_transmissions)
           PRINTF("csma: rexmit err %d, %d\n", status, n->transmissions);
         }
 #if CSMA_ADVANCED
-        if(status == MAC_TX_COLLISION) { //added by MF
-          time = default_timebase() / 2;
-        } else {
           int i;
           /* The retransmission time must be proportional to the channel
            check interval of the underlying radio duty cycling layer. */
@@ -286,7 +283,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
           }
 
           time = default_timebase() + (random_rand() % (backoff_transmissions * time));
-        }
+
         if(num_tx < metadata->max_transmissions) {
 #else
             /* The retransmission time must be proportional to the channel
@@ -345,7 +342,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
 #else /* WITH_ORPL */
                     ORPL_LOG_FROM_PACKETBUF("Csma:! dropping %u after %d tx, %d collisions",
         	                  ORPL_LOG_NODEID_FROM_RIMEADDR(&n->addr) , n->transmissions, n->collisions);
-          PRINTF("csma: drop with status %d after %d transmissions, %d collisions\n",
+          PRINTF("csma:! dropping %u after %d tx, %d collisions\n",
                  status, n->transmissions, n->collisions);
           free_packet(n, q);
           mac_call_sent_callback(sent, cptr, status, num_tx);
@@ -360,7 +357,7 @@ packet_sent(void *ptr, int status, int num_transmissions)
                 ORPL_LOG_NODEID_FROM_RIMEADDR(packetbuf_addr(PACKETBUF_ADDR_RECEIVER)), n->transmissions, n->collisions);
           }
 #endif /* WITH_ORPL */
-          PRINTF("csma: rexmit ok %d\n", n->transmissions);
+          PRINTF("csma: rexmit ok %u after %d tx, %d collisions\n",packetbuf_addr(PACKETBUF_ADDR_RECEIVER), n->transmissions, n->collisions);
         } else {
 #if WITH_ORPL
           ORPL_LOG_FROM_PACKETBUF("Csma:! dropping due to rexmit failed");
@@ -380,7 +377,9 @@ send_packet(mac_callback_t sent, void *ptr)
   struct rdc_buf_list *q;
   struct neighbor_queue *n;
   static uint16_t seqno;
- //ORPL_LOG("Queue : %u\n",queuebuf_len);
+#if WITH_ORPL_LOADCTRL
+  ORPL_LOG("Queue : %u\n",queuebuf_len);
+#endif
 #if WITH_ORPL
     /* Using packetbuf address would lead to a single queue for all anycasts.
        * We use the IPv6 UUID to have one queue per destination instead. */
