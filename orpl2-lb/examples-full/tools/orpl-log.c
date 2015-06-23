@@ -58,6 +58,13 @@ appdata_copy(struct app_data *dst, struct app_data *src)
     ((char*)dst)[i] = (((char*)src)[i]);
   }
 }
+/*---------------------------------------------------------------------------*/
+void app_data_init(struct app_data *dst, struct app_data *src) {
+  int i;
+  for(i=0; i<sizeof(struct app_data); i++) {
+    ((char*)dst)[i] = *(((char*)src)+i);
+  }
+}
 
 /* Get dataptr from the packet currently in uIP buffer */
 struct app_data *
@@ -100,7 +107,7 @@ log_appdataptr(struct app_data *dataptr)
   int curr_rank = default_instance != NULL ? default_instance->current_dag->rank : 0xffff;
 
   if(dataptr) {
-    appdata_copy(&data, dataptr);
+    appdata_init(&data, dataptr);
 
     ORPL_LOG(" [%lx %u_%u %u->%u]",
         data.seqno,
